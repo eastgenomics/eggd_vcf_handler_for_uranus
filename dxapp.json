@@ -2,9 +2,12 @@
   "name": "eggd_vcf_handler_for_uranus",
   "title": "eggd_vcf_handler_for_uranus",
   "summary": "Filter mutect2 vcfs and split multiallelics for review",
+  "properties": {
+    "github release": "dev"
+  },
   "dxapi": "1.0.0",
   "openSource": true,
-  "version": "1.1.9",
+  "version": "1.3.1",
   "inputSpec": [
     {
       "name": "vcf",
@@ -19,16 +22,15 @@
       "label": "bed file used to define regions of interest",
       "help": "The bed file will be used to remove variants outside the regions of interest",
       "class": "file",
-      "patterns": ["*.bed"],
-      "optional": false,
+      "patterns": ["coding_unrestricted*.bed"],
       "suggestions": [
         {
           "name": "001_Reference",
           "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/bed_files/b38/kits/myeloid/",
-          "region": "aws:eu-central-1"
+          "path": "/bed_files/b38/kits/myeloid/"
         }
-      ]
+      ],
+      "optional": false
     },
     {
       "name": "vep_docker",
@@ -36,15 +38,14 @@
       "help": "gzipped VEP docker image from docker pull ensemblorg/ensembl-vep:release_103",
       "class": "file",
       "patterns": ["vep_v103.1_docker.tar.gz"],
-      "optional": false,
       "suggestions": [
         {
           "name": "001_Reference",
           "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103/",
-          "region": "aws:eu-central-1"
+          "path": "/assets/vep/vep_v103/"
         }
-      ]
+      ],
+      "optional": false
     },
     {
       "name": "vep_annotation",
@@ -52,15 +53,14 @@
       "help": "tarball of ensembl refseq (b38) annotation sources from http://ftp.ensembl.org/pub/release-103/variation/vep/homo_sapiens_refseq_vep_103_GRCh38.tar.gz",
       "class": "file",
       "patterns": ["homo_sapiens_refseq_vep_103_GRCh38.tar.gz"],
-      "optional": false,
       "suggestions": [
         {
           "name": "001_Reference",
           "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103/",
-          "region": "aws:eu-central-1"
+          "path": "/assets/vep/vep_v103/"
         }
-      ]
+      ],
+      "optional": false
     },
     {
       "name": "vep_fasta",
@@ -68,47 +68,104 @@
       "help": "VEP requires FASTA for HGVS annotation",
       "class": "file",
       "patterns": ["Homo_sapiens.GRCh38.dna.toplevel.fa.gz"],
-      "optional": false,
       "suggestions": [
         {
           "name": "001_Reference",
           "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103/",
-          "region": "aws:eu-central-1"
+          "path": "/assets/vep/vep_v103/"
         }
-      ]
+      ],
+      "optional": false
     },
     {
       "name": "vep_fai",
-      "label": "fai index",
+      "label": "VEP fai index",
       "help": "VEP requires fai index for HGVS annotation",
       "class": "file",
       "patterns": ["Homo_sapiens.GRCh38.dna.toplevel.fa.gz.fai"],
-      "optional": false,
       "suggestions": [
         {
           "name": "001_Reference",
           "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103/",
-          "region": "aws:eu-central-1"
+          "path": "/assets/vep/vep_v103/"
         }
-      ]
+      ],
+      "optional": false
     },
     {
       "name": "vep_gzi",
-      "label": "BGZF index",
+      "label": "VEP BGZF index",
       "help": "VEP requires BGZF index for HGVS annotation",
       "class": "file",
       "patterns": ["Homo_sapiens.GRCh38.dna.toplevel.fa.gz.gzi"],
-      "optional": false,
       "suggestions": [
         {
           "name": "001_Reference",
           "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103/",
-          "region": "aws:eu-central-1"
+          "path": "/assets/vep/vep_v103/"
         }
-      ]
+      ],
+      "optional": false
+    },
+    {
+      "name": "python_packages",
+      "label": "Python packages for processing VCFs",
+      "help": "Python packages pandas, numpy, & pytz",
+      "class": "file",
+      "patterns": ["python_packages.tar.gz"],
+      "suggestions": [
+        {
+          "name": "001_Reference",
+          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+          "path": "/assets/myeloid_filtering/mutect2_vcf_2_bsvi_v1.0.0/"
+        }
+      ],
+      "optional": false
+    },
+    {
+      "name": "python_script",
+      "label": "Python script for processing VCFs",
+      "help": "Python script to split multiallelics and change GT",
+      "class": "file",
+      "patterns": ["mutect2_vcf_2_BSVI_*.py"],
+      "suggestions": [
+        {
+          "name": "001_Reference",
+          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+          "path": "/assets/myeloid_filtering/mutect2_vcf_2_bsvi_v1.0.0/"
+        }
+      ],
+      "optional": false
+    },
+    {
+      "name": "mutect2_fasta",
+      "label": "FASTA for bcftools to split multiallelics",
+      "help": "Should be equivalent FASTA as used by mutect2",
+      "class": "file",
+      "patterns": ["GRCh38.no_alt_analysis_set_chr_mask21.fa.gz"],
+      "suggestions": [
+        {
+          "name": "001_Reference",
+          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+          "path": "/genomes/b38/"
+        }
+      ],
+      "optional": false
+    },
+    {
+      "name": "mutect2_fai",
+      "label": "mutect2 fai index",
+      "help": "Should be equivalent fai index as used by mutect2",
+      "class": "file",
+      "patterns": ["GRCh38.no_alt_analysis_set_chr_mask21.fa.fai"],
+      "suggestions": [
+        {
+          "name": "001_Reference",
+          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+          "path": "/genomes/b38/"
+        }
+      ],
+      "optional": false
     }
   ],
   "outputSpec": [
@@ -118,6 +175,20 @@
       "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
       "class": "file",
       "patterns": ["*.vcf"]
+    },
+    {
+      "name": "bsvi_vcf",
+      "label": "modified vcf for bsvi",
+      "help": "invalid vcf for bsvi workaround",
+      "class": "file",
+      "patterns": ["*ms.vcf.gz"]
+    },
+    {
+      "name": "text_report",
+      "label": "Text variant report for scientists",
+      "help": "Text (tsv) list of variants for scientist review",
+      "class": "file",
+      "patterns": ["*.tsv"]
     }
   ],
   "runSpec": {
@@ -162,9 +233,7 @@
     "citations": [
       "doi:10.1093/bioinformatics/btp352",
       "doi:10.1093/bioinformatics/btq033",
-      "doi:10.1186/s13742-015-0047-8",
-      "doi:10.1093/bioinformatics/btv098",
-      "doi:10.1093/bioinformatics/btr330"
+      "doi:10.1186/s13059-016-0974-4"
     ],
     "upstreamProjects": [
       {
@@ -206,10 +275,18 @@
         "license": "MIT/Expat",
         "licenseUrl": "https://github.com/samtools/htslib/blob/1.11/LICENSE",
         "author": "samtools"
+      },
+      {
+        "name": "VEP",
+        "repoUrl": "https://github.com/Ensembl/ensembl-vep",
+        "version": "130.1",
+        "license": "Apache License 2.0",
+        "licenseUrl": "https://github.com/Ensembl/ensembl-vep/blob/release/103/LICENSE",
+        "author": "EMBL-EBI"
       }
     ],
-    "contactEmail": "support@dnanexus.com",
-    "whatsNew": "* 1.1.0 With VEP\n* 1.0.0 Initial app"
+    "contactEmail": "East GLH Bioinformatics",
+    "whatsNew": "*1.2.0 Creates BSVI VCF* 1.1.0 With VEP\n* 1.0.0 Initial app"
   },
   "categories": [],
   "access": {
