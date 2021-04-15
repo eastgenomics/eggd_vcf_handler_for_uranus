@@ -12,8 +12,7 @@ vcf processing
 * bgzip (v1.12)
 * samtools (v1.12)
 * tabix (v1.12)
-
-VEP (v103.1) Docker images
+* VEP (v103.1) (docker)
 
 Has access to the Internet
 

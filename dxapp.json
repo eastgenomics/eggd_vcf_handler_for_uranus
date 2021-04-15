@@ -7,7 +7,7 @@
   },
   "dxapi": "1.0.0",
   "openSource": true,
-  "version": "1.3.1",
+  "version": "1.4.0",
   "inputSpec": [
     {
       "name": "vcf",
@@ -28,111 +28,6 @@
           "name": "001_Reference",
           "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
           "path": "/bed_files/b38/kits/myeloid/"
-        }
-      ],
-      "optional": false
-    },
-    {
-      "name": "vep_docker",
-      "label": "VEP v103.1 docker image",
-      "help": "gzipped VEP docker image from docker pull ensemblorg/ensembl-vep:release_103",
-      "class": "file",
-      "patterns": ["vep_v103.1_docker.tar.gz"],
-      "suggestions": [
-        {
-          "name": "001_Reference",
-          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103/"
-        }
-      ],
-      "optional": false
-    },
-    {
-      "name": "vep_annotation",
-      "label": "VEP annotation source tarball",
-      "help": "tarball of ensembl refseq (b38) annotation sources from http://ftp.ensembl.org/pub/release-103/variation/vep/homo_sapiens_refseq_vep_103_GRCh38.tar.gz",
-      "class": "file",
-      "patterns": ["homo_sapiens_refseq_vep_103_GRCh38.tar.gz"],
-      "suggestions": [
-        {
-          "name": "001_Reference",
-          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103/"
-        }
-      ],
-      "optional": false
-    },
-    {
-      "name": "vep_fasta",
-      "label": "Human genome FASTA for VEP to generate HGVS",
-      "help": "VEP requires FASTA for HGVS annotation",
-      "class": "file",
-      "patterns": ["Homo_sapiens.GRCh38.dna.toplevel.fa.gz"],
-      "suggestions": [
-        {
-          "name": "001_Reference",
-          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103/"
-        }
-      ],
-      "optional": false
-    },
-    {
-      "name": "vep_fai",
-      "label": "VEP fai index",
-      "help": "VEP requires fai index for HGVS annotation",
-      "class": "file",
-      "patterns": ["Homo_sapiens.GRCh38.dna.toplevel.fa.gz.fai"],
-      "suggestions": [
-        {
-          "name": "001_Reference",
-          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103/"
-        }
-      ],
-      "optional": false
-    },
-    {
-      "name": "vep_gzi",
-      "label": "VEP BGZF index",
-      "help": "VEP requires BGZF index for HGVS annotation",
-      "class": "file",
-      "patterns": ["Homo_sapiens.GRCh38.dna.toplevel.fa.gz.gzi"],
-      "suggestions": [
-        {
-          "name": "001_Reference",
-          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103/"
-        }
-      ],
-      "optional": false
-    },
-    {
-      "name": "python_packages",
-      "label": "Python packages for processing VCFs",
-      "help": "Python packages pandas, numpy, & pytz",
-      "class": "file",
-      "patterns": ["python_packages.tar.gz"],
-      "suggestions": [
-        {
-          "name": "001_Reference",
-          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/myeloid_filtering/mutect2_vcf_2_bsvi_v1.0.0/"
-        }
-      ],
-      "optional": false
-    },
-    {
-      "name": "python_script",
-      "label": "Python script for processing VCFs",
-      "help": "Python script to split multiallelics and change GT",
-      "class": "file",
-      "patterns": ["mutect2_vcf_2_BSVI_*.py"],
-      "suggestions": [
-        {
-          "name": "001_Reference",
-          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/myeloid_filtering/mutect2_vcf_2_bsvi_v1.0.0/"
         }
       ],
       "optional": false
@@ -195,7 +90,7 @@
     "interpreter": "bash",
     "timeoutPolicy": {
       "*": {
-        "hours": 48
+        "hours": 6
       }
     },
     "distribution": "Ubuntu",
@@ -206,14 +101,26 @@
       {
         "name": "bedtools",
         "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-        "folder": "/assets/bedtools/bedtools_v2.30.0",
+        "folder": "/app_assets/bedtools/bedtools_v2.30.0",
         "version": "2.30.0"
       },
       {
         "name": "htslib",
         "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-        "folder": "/assets/htslib/htslib_v1.12.0",
+        "folder": "/app_assets/htslib/htslib_v1.12.0",
         "version": "1.12.0"
+      },
+      {
+        "name": "vep",
+        "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+        "folder": "/app_assets/vep/vep_v103.1",
+        "version": "103.1"
+      },
+      {
+        "name": "python_packages",
+        "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+        "folder": "/app_assets/python_packages/python_packages_v1.0.1",
+        "version": "1.0.1"
       }
     ]
   },
@@ -286,7 +193,7 @@
       }
     ],
     "contactEmail": "East GLH Bioinformatics",
-    "whatsNew": "*1.2.0 Creates BSVI VCF* 1.1.0 With VEP\n* 1.0.0 Initial app"
+    "whatsNew": "*1.4.0 Uses app assets\n *1.3.4 Creates text report\n *1.2.10 Creates BSVI VCF\n * 1.1.9 With VEP\n * 1.0.0 Initial app"
   },
   "categories": [],
   "access": {
