@@ -86,13 +86,13 @@ def generate_tsv(tsv_df):
 
     Args:
         - vcf_df (df): df of variants from vcf
-    
+
     Returns:
         - tsv_df (df): df of variants with split info column
     """
     # sense check correct annotation has been added to all rows else it
     # gives an unhelpful pandas error on trying to split
-    assert all(tsv_df.INFO.str.count('\|') > 8), \
+    assert all(tsv_df.INFO.str.count(r'\|') > 8), \
         "Incorrectly formatted INFO field, some records have < 9 fields."
 
     # keep just the CSQ field from INFO column, use join instead of
@@ -107,7 +107,7 @@ def generate_tsv(tsv_df):
     ]
 
     # splits info column to cols defined in info_cols
-    tsv_df[info_cols] = tsv_df['INFO'].str.split('|', 9, expand=True)    
+    tsv_df[info_cols] = tsv_df['INFO'].str.split('|', 9, expand=True)
 
     # remove info id from gene
     tsv_df['GENE'] = tsv_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
@@ -142,6 +142,7 @@ def generate_tsv(tsv_df):
 
     return tsv_df
 
+
 def write_files(input_vcf, vcf_header, vcf_df, tsv_df):
     """
     Write modified vcf and tsv df with split info field to files
@@ -170,7 +171,7 @@ def write_files(input_vcf, vcf_header, vcf_df, tsv_df):
     # apend variants to vcf
     with open(vcf_fname, 'a') as f:
         vcf_df.to_csv(f, sep='\t', header=False, index=False)
-    
+
     # write tsv file
     with open(tsv_fname, 'w') as tsv:
         tsv_df.to_csv(tsv, sep='\t', header=True, index=False)
