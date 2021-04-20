@@ -54,3 +54,4 @@ This app has access to the Internet
 
 ## Limitations
 - Designed to be used as part of Uranus workflow for processing myeloid NGS panel
+- When building the app, mark-section and mark-success must be executable for the app to build correctly
