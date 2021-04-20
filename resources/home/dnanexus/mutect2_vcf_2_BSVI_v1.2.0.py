@@ -11,6 +11,7 @@ Jethro Rainford
 """
 import io
 from pathlib import Path
+import re
 from shutil import which
 import subprocess
 import sys
@@ -86,7 +87,7 @@ def generate_tsv(tsv_df):
 
     Args:
         - vcf_df (df): df of variants from vcf
-
+    
     Returns:
         - tsv_df (df): df of variants with split info column
     """
@@ -107,10 +108,25 @@ def generate_tsv(tsv_df):
     ]
 
     # splits info column to cols defined in info_cols
-    tsv_df[info_cols] = tsv_df['INFO'].str.split('|', 9, expand=True)
+    tsv_df[info_cols] = tsv_df['INFO'].str.split('|', 9, expand=True)    
 
     # remove info id from gene
     tsv_df['GENE'] = tsv_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
+
+    # get index of AF in format column, should all be same and have a
+    # list with 1 value, used to get AF from the sample column
+    af_index = list(set(
+        tsv_df['FORMAT'].apply(lambda x: x.split(':').index('AF')).to_list()
+    ))
+
+    # sense check all AF at same index
+    assert len(af_index) == 1, \
+        'Error in FORMAT column, AF not all at same index.'
+
+    # get AF values from sample column add to new AF column
+    af_index = af_index[0]
+    af_values = tsv_df['SAMPLE'].apply(lambda x: x.split(':')[af_index])
+    tsv_df.insert(10, 'AF', af_values)
 
     # split messy DB annotation column out to clinvar, cosmic & dbsnp
     # cols have multiple fields and diff delimeters then join with ','
@@ -125,14 +141,19 @@ def generate_tsv(tsv_df):
         lambda x: ','.join((y for y in x if y.startswith('rs')))
     )
 
+    # scientists are picky and want NM_ and NP_ changing in HGVS
+    regex = re.compile(r'^[A-Z]*_[0-9]*.[0-9]*')
+    tsv_df['HGVSc'] = tsv_df['HGVSc'].apply(lambda x: regex.sub('HGVSc', x))
+    tsv_df['HGVSp'] = tsv_df['HGVSp'].apply(lambda x: regex.sub('HGVSp', x))
+
     # add interestingly formatted report text column
     tsv_df['Report_text'] = tsv_df[tsv_df.columns.tolist()].apply(
         lambda x: (
             f"{x['GENE']} {x['VARIANT_CLASS']} variant "
-            f"{'in exon ' + x['EXON'] if x['EXON'] else ''} \n"
-            f"HGVSc.: {x['HGVSc'] if x['HGVSc'] else 'None'} \n"
-            f"HGVSp.: {x['HGVSp'] if x['HGVSp'] else 'None'} \n"
-            f"COSMIC ID : {x['COSMIC'] if x['COSMIC'] else 'None'} \n"
+            f"{'in exon ' + x['EXON'] if x['EXON'] else ''} \r\n"
+            f"HGVSc.: {x['HGVSc'] if x['HGVSc'] else 'None'} \r\n"
+            f"HGVSp.: {x['HGVSp'] if x['HGVSp'] else 'None'} \r\n"
+            f"COSMIC ID : {x['COSMIC'] if x['COSMIC'] else 'None'} \r\n"
             f"Allele Frequency: {x['gnomAD_AF'] if x['gnomAD_AF'] else 'None'}"
         ), axis=1
     )
@@ -141,7 +162,6 @@ def generate_tsv(tsv_df):
     tsv_df = tsv_df.drop(['INFO', 'DB'], axis=1)
 
     return tsv_df
-
 
 def write_files(input_vcf, vcf_header, vcf_df, tsv_df):
     """
@@ -171,7 +191,7 @@ def write_files(input_vcf, vcf_header, vcf_df, tsv_df):
     # apend variants to vcf
     with open(vcf_fname, 'a') as f:
         vcf_df.to_csv(f, sep='\t', header=False, index=False)
-
+    
     # write tsv file
     with open(tsv_fname, 'w') as tsv:
         tsv_df.to_csv(tsv, sep='\t', header=True, index=False)
