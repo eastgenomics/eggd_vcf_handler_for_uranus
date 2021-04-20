@@ -3,11 +3,11 @@
   "title": "eggd_vcf_handler_for_uranus",
   "summary": "Filter mutect2 vcfs and split multiallelics for review",
   "properties": {
-    "githubRelease": "1.4.5"
+    "githubRelease": "1.4.7"
   },
   "dxapi": "1.0.0",
   "openSource": true,
-  "version": "1.4.5",
+  "version": "1.4.7",
   "inputSpec": [
     {
       "name": "vcf",
@@ -193,7 +193,7 @@
       }
     ],
     "contactEmail": "East GLH Bioinformatics",
-    "whatsNew": "* 1.4.5 Additions to text report * 1.4.4 Uses app assets\n * 1.3.4 Creates text report\n * 1.2.10 Creates BSVI VCF\n * 1.1.9 With VEP\n * 1.0.0 Initial app"
+    "whatsNew": "* 1.4.7 Adds AF column to text report\n * 1.4.4 Uses app assets\n * 1.3.4 Creates text report\n *1.2.10 Creates BSVI VCF\n * 1.1.9 With VEP\n * 1.0.0 Initial app"
   },
   "categories": [],
   "access": {
