@@ -125,7 +125,7 @@ def generate_tsv(tsv_df):
     # get AF values from sample column add to new AF column
     af_index = af_index[0]
     af_values = tsv_df['SAMPLE'].apply(lambda x: x.split(':')[af_index])
-    tsv_df.insert(10, 'AF', af_values)
+    tsv_df.insert(11, 'AF', af_values)
 
     # split messy DB annotation column out to clinvar, cosmic & dbsnp
     # cols have multiple fields and diff delimeters then join with ','
@@ -150,8 +150,8 @@ def generate_tsv(tsv_df):
         lambda x: (
             f"{x['GENE']} {x['VARIANT_CLASS']} variant "
             f"{'in exon ' + x['EXON'] if x['EXON'] else ''} \r\n"
-            f"HGVSc.: {x['HGVSc'] if x['HGVSc'] else 'None'} \r\n"
-            f"HGVSp.: {x['HGVSp'] if x['HGVSp'] else 'None'} \r\n"
+            f"{x['HGVSc'] if x['HGVSc'] else 'None'} \r\n"
+            f"{x['HGVSp'] if x['HGVSp'] else 'None'} \r\n"
             f"COSMIC ID : {x['COSMIC'] if x['COSMIC'] else 'None'} \r\n"
             f"Allele Frequency: {x['gnomAD_AF'] if x['gnomAD_AF'] else 'None'}"
         ), axis=1
