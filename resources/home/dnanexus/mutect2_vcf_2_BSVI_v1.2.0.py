@@ -107,7 +107,7 @@ def generate_tsv(tsv_df):
     ]
 
     # splits info column to cols defined in info_cols
-    tsv_df[info_cols] = tsv_df['INFO'].str.split('|', 9, expand=True)    
+    tsv_df[info_cols] = tsv_df['INFO'].str.split('|', 9, expand=True)
 
     # remove info id from gene
     tsv_df['GENE'] = tsv_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
