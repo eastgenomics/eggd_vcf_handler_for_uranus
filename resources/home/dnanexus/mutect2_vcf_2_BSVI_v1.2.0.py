@@ -150,8 +150,8 @@ def generate_tsv(tsv_df):
         lambda x: (
             f"{x['GENE']} {x['VARIANT_CLASS']} variant "
             f"{'in exon ' + x['EXON'] if x['EXON'] else ''} \r\n"
-            f"{x['HGVSc'] if x['HGVSc'] else 'None'} \r\n"
-            f"{x['HGVSp'] if x['HGVSp'] else 'None'} \r\n"
+            f"{x['HGVSc'] if x['HGVSc'] else 'HGVSc.: None'} \r\n"
+            f"{x['HGVSp'] if x['HGVSp'] else 'HGVSp.: None'} \r\n"
             f"COSMIC ID : {x['COSMIC'] if x['COSMIC'] else 'None'} \r\n"
             f"Allele Frequency: {x['gnomAD_AF'] if x['gnomAD_AF'] else 'None'}"
         ), axis=1
