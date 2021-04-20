@@ -67,8 +67,8 @@ def mod_genotype(input_vcf):
         assert len(sample[0]) >= 3, \
             f'Genotype field has < 3 characters: {sample[0]} for sample: {row}'
 
-        if len(sample[0]) > 3:
-            # >3 => not 0/1 => modify
+        if len(sample[0]) > 3 and sample[0].startswith('0'):
+            # >3 => not 0/1 => modify, startswith 0 => het
             sample[0] = '0/1'
             sample = ':'.join(sample)
 
