@@ -49,8 +49,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./vep -i /opt/vep/.vep/"${splitfile}" -o /opt/vep/.vep/"${annotatefile}" \
   --vcf --cache --refseq --exclude_predicted --symbol --hgvs --af_gnomad \
   --check_existing --variant_class --numbers -sift s --polyphen s --fields \
-  "SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,\
-  gnomAD_AF,SIFT,PolyPhen,Existing_variation" \
+  "SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,SIFT,PolyPhen,Existing_variation" \
   --no_stats --transcript_filter \
   "stable_id match NM_002074 \
   or stable_id match NM_000760 \
