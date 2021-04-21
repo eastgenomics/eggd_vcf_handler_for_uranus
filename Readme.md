@@ -54,4 +54,4 @@ This app has access to the Internet
 
 ## Limitations
 - Designed to be used as part of Uranus workflow for processing myeloid NGS panel
-- When building the app, mark-section and mark-success must be executable for the app to build correctly
+- When building the app, mark-section and mark-success must be executable for the app to build correctly - these two scripts are executable in this repo but it can be easy to miss if the executable bit is lost as it's a metadata change
