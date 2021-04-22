@@ -153,7 +153,7 @@ def generate_tsv(tsv_df):
             f"HGVSc: {x['HGVScshort'] if x['HGVScshort'] else 'None'} \r\n"
             f"HGVSp: {x['HGVSpshort'] if x['HGVSpshort'] else 'None'} \r\n"
             f"COSMIC ID : {x['COSMIC'] if x['COSMIC'] else 'None'} \r\n"
-            f"Allele Frequency: {x['gnomAD_AF'] if x['gnomAD_AF'] else 'None'}"
+            f"Allele Frequency (VAF): {x['AF'] if x['AF'] else 'None'}"
         ), axis=1
     )
 
