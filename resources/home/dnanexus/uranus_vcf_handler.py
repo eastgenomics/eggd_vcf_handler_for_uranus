@@ -3,19 +3,19 @@ Script to modify VCFs from mutect2 for importing to BSVI.
 Multiallelic sites need splitting first with bcftools norm and then the
 genotype fields are split from 0/0/1/0 -> 0/1 for BSVI to handle.
 
-Outputs vcf with split multiallelics and a tsv with formatted INFO
-column to individual columns.
-
-Jethro Rainford
-210311
+Outputs:
+bsvi vcf
+tsv with variants, annotation and EPIC report text
+excel with variants filtered by lymphoid and myeloid gene lists
 """
+
+
 import io
 from pathlib import Path
 import re
 import subprocess
 import sys
 import pandas as pd
-from openpyxl import Workbook
 import xlsxwriter
 
 
@@ -58,23 +58,23 @@ def mod_genotype(input_vcf):
     # read normalised vcf into df
     vcf_df = pd.read_csv(vcf_data, sep="\t", comment='#', names=cols)
 
-    # print('Adjusting multiallelic genotypes')
-    # for index, row in vcf_df.iterrows():
-    #     # loop over rows, change genotype if contains greater than 2 fields
-    #     sample = row['SAMPLE'].split(':')
+    print('Adjusting multiallelic genotypes')
+    for index, row in vcf_df.iterrows():
+        # loop over rows, change genotype if contains greater than 2 fields
+        sample = row['SAMPLE'].split(':')
 
-    #     # sense check that genotype field doesn't have anything funky,
-    #     # if it does then it can be reviewed manually
-    #     assert len(sample[0]) >= 3, \
-    #         f'Genotype field has < 3 characters: {sample[0]} for sample: {row}'
+        # sense check that genotype field doesn't have anything funky,
+        # if it does then it can be reviewed manually
+        assert len(sample[0]) >= 3, \
+            f'Genotype field has < 3 characters: {sample[0]} for sample: {row}'
 
-    #     if len(sample[0]) > 3:
-    #         # >3 => not 0/1 => modify
-    #         sample[0] = '0/1'
-    #         sample = ':'.join(sample)
+        if len(sample[0]) > 3:
+            # >3 => not 0/1 => modify
+            sample[0] = '0/1'
+            sample = ':'.join(sample)
 
-    #         # write new entry back to row
-    #         vcf_df.at[index, 'SAMPLE'] = sample
+            # write new entry back to row
+            vcf_df.at[index, 'SAMPLE'] = sample
 
     return vcf_header, vcf_df
 
@@ -185,7 +185,7 @@ def write_files(input_vcf, vcf_header, vcf_df, tsv_df):
         - vcf file with modified multiallelic records
         - tsv file with modified multialleic records and split info field
     """
-    vcf_fname = str(Path(input_vcf).name).replace('vepfilter', 'bsvi')
+    vcf_fname = str(Path(input_vcf).name).replace('allgenesvep', 'allgenes_bsvi')
     tsv_fname = vcf_fname.replace('bsvi.vcf', 'variantlist.tsv')
     excel_fname = vcf_fname.replace('bsvi.vcf', 'variantlist.xlsx')
 
@@ -206,31 +206,18 @@ def write_files(input_vcf, vcf_header, vcf_df, tsv_df):
     with open(tsv_fname, 'w') as tsv:
         tsv_df.to_csv(tsv, sep='\t', header=True, index=False)
 
-    # write excel file
-    # xlsx = Workbook()
-    # sheet = xlsx.active
-
-    # xlsx.save(filename=excel_fname)
-
-    # add tables of tiered variants to separate sheets
-    # with pd.ExcelWriter(excel_fname, engine="openpyxl", mode='w') as w:
-    #     tsv_df.to_excel(w, sheet_name='all')
-    #     vcf_df.to_excel(w, sheet_name='v')
-    #     tsv_df.to_excel(w, sheet_name='all2')
+    # write excel
     writer = pd.ExcelWriter(excel_fname, engine="xlsxwriter")
     tsv_df.to_excel(writer, sheet_name='all')
-    vcf_df.to_excel(writer, sheet_name='v')
     tsv_df.to_excel(writer, sheet_name='all2')
 
-    tsv_rows = len(tsv_df)
-    print(tsv_rows)
-
-    # Get the xlsxwriter workbook and worksheet objects.
-    xlsxwriter.workbook  = writer.book
+    # format excel
+    workbook  = writer.book
     worksheet = writer.sheets['all']
-    worksheet.set_column('X:X', 70)
-    worksheet.set_default_row(60)
-    worksheet.set_row(0, 12)
+    wrap_format = workbook.add_format({'text_wrap': True})
+    worksheet.set_column('X:X', 70, wrap_format)
+    worksheet.set_default_row(80)
+    worksheet.set_row(0, 15)
 
     writer.save()
 

@@ -65,11 +65,23 @@
   ],
   "outputSpec": [
     {
-      "name": "filtered_annotated_vcf",
-      "label": "Filtered and annotated VCF",
+      "name": "allgenes_filtered_vcf",
+      "label": "Filtered and annotated VCF for all panel genes",
       "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
       "class": "file",
-      "patterns": ["*.vcf"]
+      "patterns": ["*allgenesvep.vcf"]
+    },    {
+      "name": "lymphoid_filtered_vcf",
+      "label": "Filtered and annotated VCF for lymphoid panel genes",
+      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
+      "class": "file",
+      "patterns": ["*lymphoidvep.vcf"]
+    },    {
+      "name": "myeloid_filtered_vcf",
+      "label": "Filtered and annotated VCF for myeloid panel genes",
+      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
+      "class": "file",
+      "patterns": ["*myeloidvep.vcf"]
     },
     {
       "name": "bsvi_vcf",
@@ -84,6 +96,13 @@
       "help": "Text (tsv) list of variants for scientist review",
       "class": "file",
       "patterns": ["*.tsv"]
+    },
+    {
+      "name": "excel_report",
+      "label": "Excel variant report for scientists",
+      "help": "Excel list of variants for scientist review",
+      "class": "file",
+      "patterns": ["*.xlsx"]
     }
   ],
   "runSpec": {
