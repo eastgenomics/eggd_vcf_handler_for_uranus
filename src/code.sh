@@ -118,7 +118,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ensemblorg/ensembl-vep:release_103.1 \
   ./filter_vep -i /opt/vep/.vep/"${annotatefile}" \
   -o /opt/vep/.vep/"${vepfilterfile}" --only_matched --filter \
-  "(gnomAD_AF < 0.10 or not gnomAD_AF) and (Consequence != synonymous_variant)"
+  "(gnomAD_AF < 0.10 or not gnomAD_AF)"
 
 mark-section "BSVI workaround (overwriting GT) and creating variant list"
 # install required python packages (asset)

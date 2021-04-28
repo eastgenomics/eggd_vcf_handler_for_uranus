@@ -57,23 +57,23 @@ def mod_genotype(input_vcf):
     # read normalised vcf into df
     vcf_df = pd.read_csv(vcf_data, sep="\t", comment='#', names=cols)
 
-    print('Adjusting multiallelic genotypes')
-    for index, row in vcf_df.iterrows():
-        # loop over rows, change genotype if contains greater than 2 fields
-        sample = row['SAMPLE'].split(':')
+    # print('Adjusting multiallelic genotypes')
+    # for index, row in vcf_df.iterrows():
+    #     # loop over rows, change genotype if contains greater than 2 fields
+    #     sample = row['SAMPLE'].split(':')
 
-        # sense check that genotype field doesn't have anything funky,
-        # if it does then it can be reviewed manually
-        assert len(sample[0]) >= 3, \
-            f'Genotype field has < 3 characters: {sample[0]} for sample: {row}'
+    #     # sense check that genotype field doesn't have anything funky,
+    #     # if it does then it can be reviewed manually
+    #     assert len(sample[0]) >= 3, \
+    #         f'Genotype field has < 3 characters: {sample[0]} for sample: {row}'
 
-        if len(sample[0]) > 3:
-            # >3 => not 0/1 => modify
-            sample[0] = '0/1'
-            sample = ':'.join(sample)
+    #     if len(sample[0]) > 3:
+    #         # >3 => not 0/1 => modify
+    #         sample[0] = '0/1'
+    #         sample = ':'.join(sample)
 
-            # write new entry back to row
-            vcf_df.at[index, 'SAMPLE'] = sample
+    #         # write new entry back to row
+    #         vcf_df.at[index, 'SAMPLE'] = sample
 
     return vcf_header, vcf_df
 
@@ -122,9 +122,10 @@ def generate_tsv(tsv_df):
     assert len(af_index) == 1, \
         'Error in FORMAT column, AF not all at same index.'
 
-    # get AF values from sample column add to new AF column
+    # get AF values from sample column add to new AF column, convert to %
     af_index = af_index[0]
-    af_values = tsv_df['SAMPLE'].apply(lambda x: x.split(':')[af_index])
+    af_values = tsv_df['SAMPLE'].apply(lambda x: x.split(':')[af_index]).apply(
+        lambda x: '{:.1%}'.format(float(x)))
     tsv_df.insert(11, 'AF', af_values)
 
     # split messy DB annotation column out to clinvar, cosmic & dbsnp
@@ -140,19 +141,25 @@ def generate_tsv(tsv_df):
         lambda x: ','.join((y for y in x if y.startswith('rs')))
     )
 
+    # Include word exon in exon field to overcome excel
+    tsv_df['EXON'] = tsv_df['EXON'].apply(lambda x: 'exon ' + x if x else None)
+
     # scientists are picky and want NM_ and NP_ changing in HGVS
     regex = re.compile(r'^[A-Z]*_[0-9]*.[0-9]*:')
-    tsv_df['HGVScshort'] = tsv_df['HGVSc'].apply(lambda x: regex.sub('', x))
-    tsv_df['HGVSpshort'] = tsv_df['HGVSp'].apply(lambda x: regex.sub('', x))
+    tsv_df['HGVScshort'] = tsv_df['HGVSc'].apply(
+        lambda x: regex.sub('', x))
+    regex = re.compile(r'^[A-Z]*_[0-9]*.[0-9]*:p.')
+    tsv_df['HGVSpshort'] = tsv_df['HGVSp'].apply(
+        lambda x: regex.sub('p.(', x) + ')' if x else None)
 
     # add interestingly formatted report text column
     tsv_df['Report_text'] = tsv_df[tsv_df.columns.tolist()].apply(
         lambda x: (
-            f"{x['GENE']} {x['VARIANT_CLASS']} variant "
-            f"{'in exon ' + x['EXON'] if x['EXON'] else ''} \r\n"
+            f"{x['GENE']} {x['CONS']} "
+            f"{'in ' + x['EXON'] if x['EXON'] else ''} \r\n"
             f"HGVSc: {x['HGVScshort'] if x['HGVScshort'] else 'None'} \r\n"
             f"HGVSp: {x['HGVSpshort'] if x['HGVSpshort'] else 'None'} \r\n"
-            f"COSMIC ID : {x['COSMIC'] if x['COSMIC'] else 'None'} \r\n"
+            f"COSMIC ID: {x['COSMIC'] if x['COSMIC'] else 'None'} \r\n"
             f"Allele Frequency (VAF): {x['AF'] if x['AF'] else 'None'}"
         ), axis=1
     )
