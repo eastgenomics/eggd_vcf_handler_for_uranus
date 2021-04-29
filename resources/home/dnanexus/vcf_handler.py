@@ -29,7 +29,6 @@ def mod_genotype(vcf_df):
     Returns:
         - vcf_df (df): df of variants with modified genotype
     """
-    print('Adjusting multiallelic genotypes')
     for index, row in vcf_df.iterrows():
         # loop over rows, change genotype if contains greater than 2 fields
         sample = row['SAMPLE'].split(':')
@@ -60,7 +59,7 @@ def df_report_formatting(vcf_df):
         - vcf_df (df): df of variants from vcf
 
     Returns:
-        - vcf_df (df): df of variants with split info column
+        - vcf_df (df): df of variants with fun formatting
     """
     # sense check correct annotation has been added to all rows else it
     # gives an unhelpful pandas error on trying to split
@@ -146,6 +145,14 @@ def write_bsvi_vcf(fname, bsvi_df, bsvi_vcf_header):
     """
     Write df of variants with modified genotype to vcf for BSVI
 
+    Args:
+        - fname (str): name of allgenes input vcf, used to name output file
+        - bsvi_df (df): df of variants with modified genotype for bsvi
+        - bsvi_vcf_header (list): vcf header from original vcf
+    
+    Returns: None
+
+    Outputs: .vcf file of variants for importing into bsvi
     """
     vcf_fname = fname.replace('allgenesvep', 'allgenes_bsvi')
 
@@ -162,6 +169,13 @@ def write_tsv(fname, all_genes_df):
     """
     Write tsv file of all genes from vcf used for bsvi
 
+    Args:
+        - fname (str): name of allgenes input vcf, used to name output file
+        - all_genes_df (df): df of all genes from input vcf
+    
+    Returns: None
+    
+    Outputs: .tsv file with all gene variants
     """
     tsv_fname = fname.replace('allgenesvep.vcf', 'variantlist.tsv')
 
@@ -173,6 +187,14 @@ def write_tsv(fname, all_genes_df):
 def write_xlsx(fname, vcfs_dict):
     """
     Write xlsx file of panel filtered vcfs, each panel goes to a separate tab
+
+    Args:
+        - fname (str): name of allgenes input vcf, used to name output file
+        - vcfs_dict (dict): dict of panel vcfs
+    
+    Returns: None
+
+    Outputs: .xlsx file of panel vcfs in separate tabs
     """
     excel_fname = fname.replace('allgenesvep.vcf', 'variantlist.xlsx')
 
@@ -197,6 +219,13 @@ def write_xlsx(fname, vcfs_dict):
 def read_vcf(input_vcf):
     """
     Reads vcf into pandas df, returns header as a list for bsvi output vcf
+
+    Args:
+        - input_vcf (file): vcf file to read in
+
+    Returns:
+        - vcf_df (df): df of variants from vcf
+        - vcf_header (list): header from vcf, used to write to output bsvi vcf
     """
     # read in vcf
     process = subprocess.Popen(
@@ -231,6 +260,7 @@ def read_vcf(input_vcf):
 def parse_args():
     """
     Parse command line args
+
     Args: None
 
     Returns:
