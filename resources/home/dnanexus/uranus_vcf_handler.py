@@ -208,12 +208,17 @@ def write_files(input_vcf, vcf_header, vcf_df, tsv_df):
 
     # write excel
     writer = pd.ExcelWriter(excel_fname, engine="xlsxwriter")
-    tsv_df.to_excel(writer, sheet_name='all')
-    tsv_df.to_excel(writer, sheet_name='all2')
+    tsv_df.to_excel(writer, sheet_name='lymphoid')
+    tsv_df.to_excel(writer, sheet_name='myeloid')
 
     # format excel
     workbook  = writer.book
-    worksheet = writer.sheets['all']
+    worksheet = writer.sheets['lymphoid']
+    wrap_format = workbook.add_format({'text_wrap': True})
+    worksheet.set_column('X:X', 70, wrap_format)
+    worksheet.set_default_row(80)
+    worksheet.set_row(0, 15)
+    worksheet = writer.sheets['myeloid']
     wrap_format = workbook.add_format({'text_wrap': True})
     worksheet.set_column('X:X', 70, wrap_format)
     worksheet.set_default_row(80)
