@@ -8,7 +8,6 @@ bsvi vcf
 tsv with variants, annotation and EPIC report text
 excel with variants filtered by lymphoid and myeloid gene lists
 """
-
 import argparse
 import io
 from pathlib import Path
@@ -295,4 +294,3 @@ if __name__ == "__main__":
     write_bsvi_vcf(fname, bsvi_vcf_df, all_genes_df_header)
     write_tsv(fname, all_genes_df)
     write_xlsx(fname, vcfs_dict)
-
