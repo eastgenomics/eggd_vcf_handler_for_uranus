@@ -4,9 +4,10 @@ Multiallelic sites need splitting first with bcftools norm and then the
 genotype fields are split from 0/0/1/0 -> 0/1 for BSVI to handle.
 
 Outputs:
-bsvi vcf
-tsv with variants, annotation and EPIC report text
-excel with variants filtered by lymphoid and myeloid gene lists
+    - bsvi vcf
+    - tsv with variants, annotation and EPIC report text
+    - excel with variants filtered by vcfs passed to --vcfs arg, each
+      vcf is written to a separate tab named by input vcf
 """
 import argparse
 import io
@@ -301,7 +302,7 @@ if __name__ == "__main__":
         # loop over filtered vcfs, read into df and add to dict
         # get panel from vcf name
         panel = Path(vcf).stem.split('_')[-1].rstrip('vep')
-        panel_df, _ = read_vcf(vcf)
+        panel_df, _ = read_vcf(vcf)  # don't retain vcf header as not needed
 
         vcfs_dict[panel] = panel_df
 
