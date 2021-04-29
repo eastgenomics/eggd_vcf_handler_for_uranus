@@ -9,7 +9,7 @@ tsv with variants, annotation and EPIC report text
 excel with variants filtered by lymphoid and myeloid gene lists
 """
 
-
+import argparse
 import io
 from pathlib import Path
 import re
@@ -19,7 +19,7 @@ import pandas as pd
 import xlsxwriter
 
 
-def mod_genotype(input_vcf):
+def mod_genotype(vcf_df):
     """
     Overwrite GT with 0/1 when it's derived from a multiallelic
     e.g. 0/0/1/0 -> 0/1 and 0/0/0/1 -> 0/1
@@ -28,36 +28,8 @@ def mod_genotype(input_vcf):
         - input_vcf (file): vcf file passed at cmd line
 
     Returns:
-        - vcf_header (list): header lines read in from VCF
-        - vcf_df (df): df of variants
+        - vcf_df (df): df of variants with modified genotype
     """
-    # read in vcf
-    process = subprocess.Popen(
-        f"cat {input_vcf} ", shell=True, stdout=subprocess.PIPE
-    )
-
-    vcf_data = io.StringIO()
-
-    vcf_header = []
-
-    for line in process.stdout:
-        line = line.decode()
-        vcf_data.write(line)
-
-        if line.startswith('#'):
-            # dump out header to list to write back
-            vcf_header.append(line)
-
-    vcf_data.seek(0)
-
-    cols = [
-        "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
-        "FORMAT", "SAMPLE"
-    ]
-
-    # read normalised vcf into df
-    vcf_df = pd.read_csv(vcf_data, sep="\t", comment='#', names=cols)
-
     print('Adjusting multiallelic genotypes')
     for index, row in vcf_df.iterrows():
         # loop over rows, change genotype if contains greater than 2 fields
@@ -76,12 +48,12 @@ def mod_genotype(input_vcf):
             # write new entry back to row
             vcf_df.at[index, 'SAMPLE'] = sample
 
-    return vcf_header, vcf_df
+    return vcf_df
 
 
-def generate_tsv(tsv_df):
+def df_report_formatting(vcf_df):
     """
-    Generates tsv file from modified vcf with INFO column split out to
+    Formats df of vcf records for report with INFO column split out to
     individual columns. Expects min. 9 '|' separated fields in INFO
     column to split out.
 
@@ -89,16 +61,16 @@ def generate_tsv(tsv_df):
         - vcf_df (df): df of variants from vcf
 
     Returns:
-        - tsv_df (df): df of variants with split info column
+        - vcf_df (df): df of variants with split info column
     """
     # sense check correct annotation has been added to all rows else it
     # gives an unhelpful pandas error on trying to split
-    assert all(tsv_df.INFO.str.count(r'\|') > 8), \
+    assert all(vcf_df.INFO.str.count(r'\|') > 8), \
         "Incorrectly formatted INFO field, some records have < 9 fields."
 
     # keep just the CSQ field from INFO column, use join instead of
     # using index in case of missing and being empty => index error
-    tsv_df['INFO'] = tsv_df['INFO'].str.split(';').apply(
+    vcf_df['INFO'] = vcf_df['INFO'].str.split(';').apply(
         lambda x: ''.join((y for y in x if y.startswith('CSQ=')))
     )
 
@@ -108,15 +80,15 @@ def generate_tsv(tsv_df):
     ]
 
     # splits info column to cols defined in info_cols
-    tsv_df[info_cols] = tsv_df['INFO'].str.split('|', 9, expand=True)
+    vcf_df[info_cols] = vcf_df['INFO'].str.split('|', 9, expand=True)
 
     # remove info id from gene
-    tsv_df['GENE'] = tsv_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
+    vcf_df['GENE'] = vcf_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
 
     # get index of AF in format column, should all be same and have a
     # list with 1 value, used to get AF from the sample column
     af_index = list(set(
-        tsv_df['FORMAT'].apply(lambda x: x.split(':').index('AF')).to_list()
+        vcf_df['FORMAT'].apply(lambda x: x.split(':').index('AF')).to_list()
     ))
 
     # sense check all AF at same index
@@ -125,36 +97,36 @@ def generate_tsv(tsv_df):
 
     # get AF values from sample column add to new AF column, convert to %
     af_index = af_index[0]
-    af_values = tsv_df['SAMPLE'].apply(lambda x: x.split(':')[af_index]).apply(
+    af_values = vcf_df['SAMPLE'].apply(lambda x: x.split(':')[af_index]).apply(
         lambda x: '{:.1%}'.format(float(x)))
-    tsv_df.insert(11, 'AF', af_values)
+    vcf_df.insert(11, 'AF', af_values)
 
     # split messy DB annotation column out to clinvar, cosmic & dbsnp
     # cols have multiple fields and diff delimeters then join with ','
     # in case of having more than one entry
-    tsv_df['COSMIC'] = tsv_df['DB'].str.split(r'\&|\||,').apply(
+    vcf_df['COSMIC'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
         lambda x: ','.join((y for y in x if y.startswith('COS')))
     )
-    tsv_df['CLINVAR'] = tsv_df['DB'].str.split(r'\&|\||,').apply(
+    vcf_df['CLINVAR'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
         lambda x: ','.join((y for y in x if y.startswith('CM')))
     )
-    tsv_df['dbSNP'] = tsv_df['DB'].str.split(r'\&|\||,').apply(
+    vcf_df['dbSNP'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
         lambda x: ','.join((y for y in x if y.startswith('rs')))
     )
 
     # Include word exon in exon field to overcome excel
-    tsv_df['EXON'] = tsv_df['EXON'].apply(lambda x: 'exon ' + x if x else None)
+    vcf_df['EXON'] = vcf_df['EXON'].apply(lambda x: 'exon ' + x if x else None)
 
     # scientists are picky and want NM_ and NP_ changing in HGVS
     regex = re.compile(r'^[A-Z]*_[0-9]*.[0-9]*:')
-    tsv_df['HGVScshort'] = tsv_df['HGVSc'].apply(
+    vcf_df['HGVScshort'] = vcf_df['HGVSc'].apply(
         lambda x: regex.sub('', x))
     regex = re.compile(r'^[A-Z]*_[0-9]*.[0-9]*:p.')
-    tsv_df['HGVSpshort'] = tsv_df['HGVSp'].apply(
+    vcf_df['HGVSpshort'] = vcf_df['HGVSp'].apply(
         lambda x: regex.sub('p.(', x) + ')' if x else None)
 
     # add interestingly formatted report text column
-    tsv_df['Report_text'] = tsv_df[tsv_df.columns.tolist()].apply(
+    vcf_df['Report_text'] = vcf_df[vcf_df.columns.tolist()].apply(
         lambda x: (
             f"{x['GENE']} {x['CONS']} "
             f"{'in ' + x['EXON'] if x['EXON'] else ''} \n"
@@ -166,77 +138,161 @@ def generate_tsv(tsv_df):
     )
 
     # drop unneeded columns
-    tsv_df = tsv_df.drop(['INFO', 'DB', 'HGVScshort', 'HGVSpshort'], axis=1)
+    vcf_df = vcf_df.drop(['INFO', 'DB', 'HGVScshort', 'HGVSpshort'], axis=1)
 
-    return tsv_df
+    return vcf_df
 
 
-def write_files(input_vcf, vcf_header, vcf_df, tsv_df):
+def write_bsvi_vcf(fname, bsvi_df, bsvi_vcf_header):
     """
-    Write modified vcf and tsv df with split info field to files
+    Write df of variants with modified genotype to vcf for BSVI
 
-    Args:
-        - input_vcf (file): vcf file passed at cmd line
-        - vcf_header (list): header lines read in from VCF
-        - vcf_df (df): df of variants
-        - tsv_df (df): df of variants with split info column
-
-    Outputs:
-        - vcf file with modified multiallelic records
-        - tsv file with modified multialleic records and split info field
     """
-    vcf_fname = str(Path(input_vcf).name).replace('allgenesvep', 'allgenes_bsvi')
-    tsv_fname = vcf_fname.replace('bsvi.vcf', 'variantlist.tsv')
-    excel_fname = vcf_fname.replace('bsvi.vcf', 'variantlist.xlsx')
-
-    print(f'Writing vcf to outfile: {vcf_fname}')
-    print(f'Writing tsv to outfile: {tsv_fname}')
-    print(f'Writing excel to outfile: {excel_fname}')
+    vcf_fname = fname.replace('allgenesvep', 'allgenes_bsvi')
 
     with open(vcf_fname, 'w') as f:
-        for line in vcf_header:
+        for line in bsvi_vcf_header:
             # write header to vcf
             f.write(line)
 
-    # apend variants to vcf
-    with open(vcf_fname, 'a') as f:
-        vcf_df.to_csv(f, sep='\t', header=False, index=False)
+        # apend variants to vcf
+        bsvi_df.to_csv(f, sep='\t', header=False, index=False)
+
+
+def write_tsv(fname, all_genes_df):
+    """
+    Write tsv file of all genes from vcf used for bsvi
+
+    """
+    tsv_fname = fname.replace('allgenesvep.vcf', 'variantlist.tsv')
 
     # write tsv file
     with open(tsv_fname, 'w') as tsv:
-        tsv_df.to_csv(tsv, sep='\t', header=True, index=False)
+        all_genes_df.to_csv(tsv, sep='\t', header=True, index=False)
+
+
+def write_xlsx(fname, vcfs_dict):
+    """
+    Write xlsx file of panel filtered vcfs, each panel goes to a separate tab
+    """
+    excel_fname = fname.replace('allgenesvep.vcf', 'variantlist.xlsx')
 
     # write excel
     writer = pd.ExcelWriter(excel_fname, engine="xlsxwriter")
-    tsv_df.to_excel(writer, sheet_name='lymphoid')
-    tsv_df.to_excel(writer, sheet_name='myeloid')
+    workbook = writer.book
 
-    # format excel
-    workbook  = writer.book
-    worksheet = writer.sheets['lymphoid']
-    wrap_format = workbook.add_format({'text_wrap': True})
-    worksheet.set_column('X:X', 70, wrap_format)
-    worksheet.set_default_row(80)
-    worksheet.set_row(0, 15)
-    worksheet = writer.sheets['myeloid']
-    wrap_format = workbook.add_format({'text_wrap': True})
-    worksheet.set_column('X:X', 70, wrap_format)
-    worksheet.set_default_row(80)
-    worksheet.set_row(0, 15)
+    for panel_name, vcf_df in vcfs_dict.items():
+        # loop over panel dfs, write to sheet & apply formatting
+        vcf_df.to_excel(writer, sheet_name=panel_name)
+
+        # fun excel formatting
+        worksheet = writer.sheets[panel_name]
+        wrap_format = workbook.add_format({'text_wrap': True})
+        worksheet.set_column('X:X', 70, wrap_format)
+        worksheet.set_default_row(80)
+        worksheet.set_row(0, 15)
 
     writer.save()
 
 
+def read_vcf(input_vcf):
+    """
+    Reads vcf into pandas df, returns header as a list for bsvi output vcf
+    """
+    # read in vcf
+    process = subprocess.Popen(
+        f"cat {input_vcf} ", shell=True, stdout=subprocess.PIPE
+    )
+
+    vcf_data = io.StringIO()
+
+    vcf_header = []
+
+    for line in process.stdout:
+        line = line.decode()
+        vcf_data.write(line)
+
+        if line.startswith('#'):
+            # dump out header to list to write back for bsvi vcf
+            vcf_header.append(line)
+
+    vcf_data.seek(0)
+
+    cols = [
+        "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
+        "FORMAT", "SAMPLE"
+    ]
+
+    # read vcf into df
+    vcf_df = pd.read_csv(vcf_data, sep="\t", comment='#', names=cols)
+
+    return vcf_df, vcf_header
+
+
+def parse_args():
+    """
+    Parse command line args
+    Args: None
+
+    Returns:
+        - args (Namespace): object containing parsed arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description=(
+            'Generates split multiallelic VCF for BSVI, a tsv of variants '
+            'the same VCF and an excel file of variants from the other VCFs'
+        )
+    )
+
+    parser.add_argument(
+        '-b', '--bsvi',
+        help='VCF to generate modified VCF for BSVI & tsv file from'
+    )
+
+    parser.add_argument(
+        '-v', '--vcfs', nargs='*',
+        help='VCF(s) of pre-filtered variants to parse into Excel file'
+    )
+
+    args = parser.parse_args()
+
+    return args
+
+
 if __name__ == "__main__":
+    args = parse_args()
 
-    # check only one vcf passed
-    assert len(sys.argv) == 2, 'Incorrect no. VCFs passed, requires one.'
+    # read bsvi vcf into df, retain header for output vcf
+    all_genes_df, all_genes_df_header = read_vcf(args.bsvi)
 
-    input_vcf = sys.argv[1]
-    vcf_header, vcf_df = mod_genotype(input_vcf)
+    # build dict of other panel vcfs, allows to store panel name with df
+    vcfs_dict = {}
 
-    # copy variant df and modify appropriately for tsv
-    tsv_df = vcf_df.copy(deep=True)
-    tsv_df = generate_tsv(tsv_df)
+    for vcf in args.vcfs:
+        # loop over filtered vcfs, read into df and add to dict
+        # get panel from vcf name
+        panel = Path(vcf).stem.split('_')[-1].rstrip('vep')
+        panel_df, _ = read_vcf(vcf)
 
-    write_files(input_vcf, vcf_header, vcf_df, tsv_df)
+        vcfs_dict[panel] = panel_df
+
+    # modify genotype of vcf for bsvi
+    bsvi_vcf_df = all_genes_df.copy(deep=True)
+    bsvi_vcf_df = mod_genotype(bsvi_vcf_df)
+
+    # apply formatting to full vcf df for tsv file
+    all_genes_df = df_report_formatting(all_genes_df)
+
+    # apply formatting to each panel df for xlsx file
+    for panel, vcf_df in vcfs_dict.items():
+        vcf_df = df_report_formatting(vcf_df)
+        vcfs_dict[panel] = vcf_df
+
+
+    # write output files, use name of bsvi vcf as prefix for all
+    fname = str(Path(args.bsvi).name)
+
+    write_bsvi_vcf(fname, bsvi_vcf_df, all_genes_df_header)
+    write_tsv(fname, all_genes_df)
+    write_xlsx(fname, vcfs_dict)
+
