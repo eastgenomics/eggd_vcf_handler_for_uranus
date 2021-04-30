@@ -1,13 +1,23 @@
 """
-Script to modify VCFs from mutect2 for importing to BSVI.
-Multiallelic sites need splitting first with bcftools norm and then the
-genotype fields are split from 0/0/1/0 -> 0/1 for BSVI to handle.
+Script takes mutect VCFs and:
+    1. Create vcf for import into BSVI
+    2. Create excel workbook with sheets for each panel
+
+BSVI vcf requires multiallelic sites are decomposed and that all genotype
+fields are simplified to 0/1 (from, for example, 0/0/1/0).
+
+Excel workbook for scientists to look at variants have sheets, one for each
+panel, with annotations and preformatted report text for Epic.
+
+Inputs are vcf files after VEP annotation and filtering:
+    - *_allgenesvep.vcf (specified with -b argument)
+    - *_[panel-name]vep.vcf (any number, specified with -v argument)
+        e.g. *_lymphoidvep.vcf *_myeloidvep.vcf
 
 Outputs:
     - bsvi vcf
-    - tsv with variants, annotation and EPIC report text
-    - excel with variants filtered by vcfs passed to --vcfs arg, each
-      vcf is written to a separate tab named by input vcf
+    - tsv with variants
+    - excel workbook with variants, one panel per sheet
 """
 
 import argparse
@@ -18,6 +28,78 @@ import subprocess
 import sys
 import pandas as pd
 import xlsxwriter
+
+
+def parse_args():
+    """
+    Parse command line args
+
+    Args: None
+
+    Returns:
+        - args (Namespace): object containing parsed arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description=(
+            'Generates a tsv of variants, a decomposed VCF for BSVI,'
+            'and an excel workbook of variants for each panel'
+        )
+    )
+
+    parser.add_argument(
+        '-a', '--allgenes',
+        help='allgenes VCF from which to generate tsv file and BSVI vcf'
+    )
+
+    parser.add_argument(
+        '-v', '--vcfs', nargs='*',
+        help='Panel filtered VCF(s) from which to generate excel workbook'
+    )
+
+    args = parser.parse_args()
+
+    return args
+
+
+def read_vcf(input_vcf):
+    """
+    Reads vcf into pandas df, returns header as a list for output (bsvi) vcf
+
+    Args:
+        - input_vcf (file): vcf file to read in
+
+    Returns:
+        - vcf_df (df): df of variants from vcf
+        - vcf_header (list): header from vcf, for writing output (bsvi) vcf
+    """
+    # read in vcf
+    process = subprocess.Popen(
+        f"cat {input_vcf} ", shell=True, stdout=subprocess.PIPE
+    )
+
+    vcf_data = io.StringIO()
+
+    vcf_header = []
+
+    for line in process.stdout:
+        line = line.decode()
+        vcf_data.write(line)
+
+        if line.startswith('#'):
+            # dump out header to list to write back for output vcf
+            vcf_header.append(line)
+
+    vcf_data.seek(0)
+
+    cols = [
+        "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
+        "FORMAT", "SAMPLE"
+    ]
+
+    # read vcf into df
+    vcf_df = pd.read_csv(vcf_data, sep="\t", comment='#', names=cols)
+
+    return vcf_df, vcf_header
 
 
 def mod_genotype(vcf_df):
@@ -99,7 +181,7 @@ def df_report_formatting(vcf_df):
     af_index = af_index[0]
     af_values = vcf_df['SAMPLE'].apply(lambda x: x.split(':')[af_index]).apply(
         lambda x: '{:.1%}'.format(float(x)))
-    vcf_df.insert(11, 'AF', af_values)
+    vcf_df.insert(11, 'Mutect2_AF%', af_values)
 
     # split messy DB annotation column out to clinvar, cosmic & dbsnp
     # cols have multiple fields and diff delimeters then join with ','
@@ -133,7 +215,7 @@ def df_report_formatting(vcf_df):
             f"HGVSc: {x['HGVScshort'] if x['HGVScshort'] else 'None'} \n"
             f"HGVSp: {x['HGVSpshort'] if x['HGVSpshort'] else 'None'} \n"
             f"COSMIC ID: {x['COSMIC'] if x['COSMIC'] else 'None'} \n"
-            f"Allele Frequency (VAF): {x['AF'] if x['AF'] else 'None'}"
+            f"Allele Frequency (VAF): {x['Mutect2_AF%'] if x['Mutect2_AF%'] else 'None'}"
         ), axis=1
     )
 
@@ -151,7 +233,7 @@ def write_bsvi_vcf(fname, bsvi_df, bsvi_vcf_header):
         - fname (str): name of allgenes input vcf, used to name output file
         - bsvi_df (df): df of variants with modified genotype for bsvi
         - bsvi_vcf_header (list): vcf header from original vcf
-    
+
     Returns: None
 
     Outputs: .vcf file of variants for importing into bsvi
@@ -169,17 +251,17 @@ def write_bsvi_vcf(fname, bsvi_df, bsvi_vcf_header):
 
 def write_tsv(fname, all_genes_df):
     """
-    Write tsv file of all genes from vcf used for bsvi
+    Write tsv file of all genes from allgenes vcf
 
     Args:
         - fname (str): name of allgenes input vcf, used to name output file
         - all_genes_df (df): df of all genes from input vcf
-    
+
     Returns: None
-    
+
     Outputs: .tsv file with all gene variants
     """
-    tsv_fname = fname.replace('allgenesvep.vcf', 'variantlist.tsv')
+    tsv_fname = fname.replace('allgenesvep.vcf', 'allgenes.tsv')
 
     # write tsv file
     with open(tsv_fname, 'w') as tsv:
@@ -193,12 +275,12 @@ def write_xlsx(fname, vcfs_dict):
     Args:
         - fname (str): name of allgenes input vcf, used to name output file
         - vcfs_dict (dict): dict of panel vcfs
-    
+
     Returns: None
 
     Outputs: .xlsx file of panel vcfs in separate tabs
     """
-    excel_fname = fname.replace('allgenesvep.vcf', 'variantlist.xlsx')
+    excel_fname = fname.replace('allgenesvep.vcf', 'panels.xlsx')
 
     # write excel
     writer = pd.ExcelWriter(excel_fname, engine="xlsxwriter")
@@ -218,100 +300,28 @@ def write_xlsx(fname, vcfs_dict):
     writer.save()
 
 
-def read_vcf(input_vcf):
-    """
-    Reads vcf into pandas df, returns header as a list for bsvi output vcf
-
-    Args:
-        - input_vcf (file): vcf file to read in
-
-    Returns:
-        - vcf_df (df): df of variants from vcf
-        - vcf_header (list): header from vcf, used to write to output bsvi vcf
-    """
-    # read in vcf
-    process = subprocess.Popen(
-        f"cat {input_vcf} ", shell=True, stdout=subprocess.PIPE
-    )
-
-    vcf_data = io.StringIO()
-
-    vcf_header = []
-
-    for line in process.stdout:
-        line = line.decode()
-        vcf_data.write(line)
-
-        if line.startswith('#'):
-            # dump out header to list to write back for bsvi vcf
-            vcf_header.append(line)
-
-    vcf_data.seek(0)
-
-    cols = [
-        "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
-        "FORMAT", "SAMPLE"
-    ]
-
-    # read vcf into df
-    vcf_df = pd.read_csv(vcf_data, sep="\t", comment='#', names=cols)
-
-    return vcf_df, vcf_header
-
-
-def parse_args():
-    """
-    Parse command line args
-
-    Args: None
-
-    Returns:
-        - args (Namespace): object containing parsed arguments.
-    """
-    parser = argparse.ArgumentParser(
-        description=(
-            'Generates split multiallelic VCF for BSVI, a tsv of variants '
-            'the same VCF and an excel file of variants from the other VCFs'
-        )
-    )
-
-    parser.add_argument(
-        '-b', '--bsvi',
-        help='VCF to generate modified VCF for BSVI & tsv file from'
-    )
-
-    parser.add_argument(
-        '-v', '--vcfs', nargs='*',
-        help='VCF(s) of pre-filtered variants to parse into Excel file'
-    )
-
-    args = parser.parse_args()
-
-    return args
-
-
 if __name__ == "__main__":
     args = parse_args()
 
-    # read bsvi vcf into df, retain header for output vcf
-    all_genes_df, all_genes_df_header = read_vcf(args.bsvi)
+    # read allgenes vcf into df, retain header for output vcf
+    all_genes_df, all_genes_df_header = read_vcf(args.allgenes)
 
-    # build dict of other panel vcfs, allows to store panel name with df
+    # build dict of panel vcfs, allows to store panel name with df
     vcfs_dict = {}
 
     for vcf in args.vcfs:
-        # loop over filtered vcfs, read into df and add to dict
-        # get panel from vcf name
+        # loop over panel vcfs, read into df and add to dict
+        # get panel name from vcf name
         panel = Path(vcf).stem.split('_')[-1].rstrip('vep')
         panel_df, _ = read_vcf(vcf)  # don't retain vcf header as not needed
 
         vcfs_dict[panel] = panel_df
 
-    # modify genotype of vcf for bsvi
+    # modify genotype of bsvi vcf
     bsvi_vcf_df = all_genes_df.copy(deep=True)
     bsvi_vcf_df = mod_genotype(bsvi_vcf_df)
 
-    # apply formatting to full vcf df for tsv file
+    # apply formatting to allgenes vcf df for tsv file
     all_genes_df = df_report_formatting(all_genes_df)
 
     # apply formatting to each panel df for xlsx file
@@ -319,9 +329,8 @@ if __name__ == "__main__":
         vcf_df = df_report_formatting(vcf_df)
         vcfs_dict[panel] = vcf_df
 
-
-    # write output files, use name of bsvi vcf as prefix for all
-    fname = str(Path(args.bsvi).name)
+    # write output files, use name of allgenes vcf as prefix for all
+    fname = str(Path(args.allgenes).name)
 
     write_bsvi_vcf(fname, bsvi_vcf_df, all_genes_df_header)
     write_tsv(fname, all_genes_df)
