@@ -180,7 +180,7 @@ def df_report_formatting(vcf_df):
     af_index = af_index[0]
     af_values = vcf_df['SAMPLE'].apply(lambda x: x.split(':')[af_index]).apply(
         lambda x: '{:.1%}'.format(float(x)))
-    vcf_df.insert(11, 'AF', af_values)
+    vcf_df.insert(11, 'Mutect2_AF%', af_values)
 
     # split messy DB annotation column out to clinvar, cosmic & dbsnp
     # cols have multiple fields and diff delimeters then join with ','
@@ -214,7 +214,7 @@ def df_report_formatting(vcf_df):
             f"HGVSc: {x['HGVScshort'] if x['HGVScshort'] else 'None'} \n"
             f"HGVSp: {x['HGVSpshort'] if x['HGVSpshort'] else 'None'} \n"
             f"COSMIC ID: {x['COSMIC'] if x['COSMIC'] else 'None'} \n"
-            f"Allele Frequency (VAF): {x['AF'] if x['AF'] else 'None'}"
+            f"Allele Frequency (VAF): {x['Mutect2_AF%'] if x['Mutect2_AF%'] else 'None'}"
         ), axis=1
     )
 
