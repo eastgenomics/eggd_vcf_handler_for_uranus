@@ -69,7 +69,7 @@ def read_vcf(input_vcf):
 
     Returns:
         - vcf_df (df): df of variants from vcf
-        - vcf_header (list): header from vcf, used to write to output (bsvi) vcf
+        - vcf_header (list): header from vcf, for writing output (bsvi) vcf
     """
     # read in vcf
     process = subprocess.Popen(
@@ -232,7 +232,7 @@ def write_bsvi_vcf(fname, bsvi_df, bsvi_vcf_header):
         - fname (str): name of allgenes input vcf, used to name output file
         - bsvi_df (df): df of variants with modified genotype for bsvi
         - bsvi_vcf_header (list): vcf header from original vcf
-    
+
     Returns: None
 
     Outputs: .vcf file of variants for importing into bsvi
@@ -255,9 +255,9 @@ def write_tsv(fname, all_genes_df):
     Args:
         - fname (str): name of allgenes input vcf, used to name output file
         - all_genes_df (df): df of all genes from input vcf
-    
+
     Returns: None
-    
+
     Outputs: .tsv file with all gene variants
     """
     tsv_fname = fname.replace('allgenesvep.vcf', 'allgenes.tsv')
@@ -274,7 +274,7 @@ def write_xlsx(fname, vcfs_dict):
     Args:
         - fname (str): name of allgenes input vcf, used to name output file
         - vcfs_dict (dict): dict of panel vcfs
-    
+
     Returns: None
 
     Outputs: .xlsx file of panel vcfs in separate tabs
@@ -327,7 +327,6 @@ if __name__ == "__main__":
     for panel, vcf_df in vcfs_dict.items():
         vcf_df = df_report_formatting(vcf_df)
         vcfs_dict[panel] = vcf_df
-
 
     # write output files, use name of allgenes vcf as prefix for all
     fname = str(Path(args.allgenes).name)
