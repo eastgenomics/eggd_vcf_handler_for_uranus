@@ -233,7 +233,7 @@ mark-section "BSVI workaround (overwriting GT) and creating variant list"
 pip3 install /pytz-*.whl /numpy-*.whl /pandas-*.whl /XlsxWriter-*.whl
 # call Python script (asset) to spit multiallelics
 # and generate BSVI VCF & text report
-python3 vcf_handler.py -a "${allgenesvepfile}" -v "${lymphoidfile}" "${myeloidfile}"
+python3 vcf_handler.py -a "${allgenesvepfile}" -v "${lymphoidvepfile}" "${myeloidvepfile}"
 
 
 mark-section "uploading output"

@@ -1,13 +1,13 @@
 {
   "name": "eggd_vcf_handler_for_uranus",
   "title": "eggd_vcf_handler_for_uranus",
-  "summary": "Filter mutect2 vcfs and split multiallelics for review",
+  "summary": "Decomposes multiallelics, annotes and filters",
   "properties": {
-    "githubRelease": "1.5.1"
+    "githubRelease": "1.5.3"
   },
   "dxapi": "1.0.0",
   "openSource": true,
-  "version": "1.5.1",
+  "version": "1.5.3",
   "inputSpec": [
     {
       "name": "vcf",
@@ -212,7 +212,7 @@
       }
     ],
     "contactEmail": "East GLH Bioinformatics",
-    "whatsNew": "* 1.5.1 Added excel workbook output with variants for each panel in separate sheets, removed synonymous variant filter, prefix exon numbers with the word exon to overcome excel, further report_text formatting\n * 1.4.12 Allele fraction in tsv variantlist\n * 1.4.10 Make mark-section and mark-success executable in github\n * 1.4.9 Minor changed to report_text field in tsv, and brings back gnomad AF in tsv(!)\n * 1.4.8 (Deprecated) Adds AF column to text report\n * 1.4.4 (Deprecated) Uses app assets\n * 1.3.4 (Deprecated) Creates text report\n * 1.2.10 (Deprecated) Creates BSVI VCF\n * 1.1.9 (Deprecated) With VEP\n * 1.0.0 (Deprecated) Initial app"
+    "whatsNew": "* 1.5.3 Added excel workbook output with variants for each panel in separate sheets, removed synonymous variant filter, prefix exon numbers with the word exon to overcome excel, further report_text formatting\n * 1.4.12 Allele fraction in tsv variantlist\n * 1.4.10 Make mark-section and mark-success executable in github\n * 1.4.9 Minor changed to report_text field in tsv, and brings back gnomad AF in tsv(!)\n * 1.4.8 (Deprecated) Adds AF column to text report\n * 1.4.4 (Deprecated) Uses app assets\n * 1.3.4 (Deprecated) Creates text report\n * 1.2.10 (Deprecated) Creates BSVI VCF\n * 1.1.9 (Deprecated) With VEP\n * 1.0.0 (Deprecated) Initial app"
   },
   "categories": [],
   "access": {
