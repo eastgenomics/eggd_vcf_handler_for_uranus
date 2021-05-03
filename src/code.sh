@@ -154,7 +154,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ensemblorg/ensembl-vep:release_103.1 \
   ./filter_vep -i /opt/vep/.vep/"${lymphoidfile}" \
   -o /opt/vep/.vep/"${lymphoidvepfile}" --only_matched --filter \
-  "(gnomAD_AF < 0.10 or not gnomAD_AF)" --filter "SYMBOL"
+  "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
 # run vep for myeloid genes list
 myeloidfile="${vcf_prefix}_myeloid.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -225,7 +225,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ensemblorg/ensembl-vep:release_103.1 \
   ./filter_vep -i /opt/vep/.vep/"${myeloidfile}" \
   -o /opt/vep/.vep/"${myeloidvepfile}" --only_matched --filter \
-  "(gnomAD_AF < 0.10 or not gnomAD_AF)" --filter "SYMBOL"
+  "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
 
 
 mark-section "BSVI workaround (overwriting GT) and creating variant list"
