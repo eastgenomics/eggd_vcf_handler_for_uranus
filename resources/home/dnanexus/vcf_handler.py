@@ -10,7 +10,7 @@ Excel workbook for scientists to look at variants have sheets, one for each
 panel, with annotations and preformatted report text for Epic.
 
 Inputs are vcf files after VEP annotation and filtering:
-    - *_allgenesvep.vcf (specified with -b argument)
+    - *_allgenesvep.vcf (specified with -a argument)
     - *_[panel-name]vep.vcf (any number, specified with -v argument)
         e.g. *_lymphoidvep.vcf *_myeloidvep.vcf
 
@@ -136,7 +136,7 @@ def mod_genotype(vcf_df):
 def df_report_formatting(vcf_df):
     """
     Formats df of vcf records for report with INFO column split out to
-    individual columns. Expects min. 9 '|' separated fields in INFO
+    individual columns. Expects min. 14 '|' separated fields in INFO
     column to split out.
 
     Args:
@@ -145,27 +145,35 @@ def df_report_formatting(vcf_df):
     Returns:
         - vcf_df (df): df of variants with fun formatting
     """
-    # sense check correct annotation has been added to all rows else it
-    # gives an unhelpful pandas error on trying to split
-    assert all(vcf_df.INFO.str.count(r'\|') > 8), \
-        "Incorrectly formatted INFO field, some records have < 9 fields."
+    # Get DP field from INFO column, use join instead of
+    # using index in case of missing and being empty => index error
+    vcf_df['Read_Depth'] = vcf_df['INFO'].str.split(';').apply(
+        lambda x: ''.join((y for y in x if y.startswith('DP=')))
+    )
+    vcf_df['Read_Depth'] = vcf_df['Read_Depth'].apply(
+        lambda x: x.replace('DP=', '')
+    )
 
-    # keep just the CSQ field from INFO column, use join instead of
+    # get CSQ field from INFO column, use join instead of
     # using index in case of missing and being empty => index error
     vcf_df['INFO'] = vcf_df['INFO'].str.split(';').apply(
         lambda x: ''.join((y for y in x if y.startswith('CSQ=')))
     )
 
     info_cols = [
-        'GENE', 'VARIANT_CLASS', 'CONS', 'EXON', 'HGVSc',
-        'HGVSp', 'gnomAD_AF', 'SIFT', 'POLYPHEN', 'DB'
+        'GENE', 'VARIANT_CLASS', 'CONSEQ', 'EXON', 'HGVSc', 'HGVSp',
+        'gnomAD_AF', 'CADD_PHRED', 'DB', 'ClinVar', 'ClinVar_CLNDN',
+        'ClinVar_CLNSIG', 'Prev_AC', 'Prev_NS'
     ]
 
     # splits info column to cols defined in info_cols
-    vcf_df[info_cols] = vcf_df['INFO'].str.split('|', 9, expand=True)
+    vcf_df[info_cols] = vcf_df['INFO'].str.split('|', -1, expand=True)
 
     # remove info id from gene
     vcf_df['GENE'] = vcf_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
+
+    # calc Prev_count
+    vcf_df['Prev_Count'] = vcf_df['Prev_AC'] + '/' + vcf_df['Prev_NS']
 
     # get index of AF in format column, should all be same and have a
     # list with 1 value, used to get AF from the sample column
@@ -181,7 +189,7 @@ def df_report_formatting(vcf_df):
     af_index = af_index[0]
     af_values = vcf_df['SAMPLE'].apply(lambda x: x.split(':')[af_index]).apply(
         lambda x: '{:.1%}'.format(float(x)))
-    vcf_df.insert(11, 'Mutect2_AF%', af_values)
+    vcf_df.insert(16, 'Mutect2_AF%', af_values)
 
     # split messy DB annotation column out to clinvar, cosmic & dbsnp
     # cols have multiple fields and diff delimeters then join with ','
@@ -189,9 +197,10 @@ def df_report_formatting(vcf_df):
     vcf_df['COSMIC'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
         lambda x: ','.join((y for y in x if y.startswith('COS')))
     )
-    vcf_df['CLINVAR'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
-        lambda x: ','.join((y for y in x if y.startswith('CM')))
-    )
+    # waiting to hear if the haemonc team want hgmd or not
+    # vcf_df['HGMD'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
+    #     lambda x: ','.join((y for y in x if y.startswith('CM', 'CD')))
+    # )
     vcf_df['dbSNP'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
         lambda x: ','.join((y for y in x if y.startswith('rs')))
     )
@@ -200,27 +209,39 @@ def df_report_formatting(vcf_df):
     vcf_df['EXON'] = vcf_df['EXON'].apply(lambda x: 'exon ' + x if x else None)
 
     # scientists are picky and want NM_ and NP_ changing in HGVS
-    regex = re.compile(r'^[A-Z]*_[0-9]*.[0-9]*:')
-    vcf_df['HGVScshort'] = vcf_df['HGVSc'].apply(
-        lambda x: regex.sub('', x))
-    regex = re.compile(r'^[A-Z]*_[0-9]*.[0-9]*:p.')
-    vcf_df['HGVSpshort'] = vcf_df['HGVSp'].apply(
-        lambda x: regex.sub('p.(', x) + ')' if x else None)
+    vcf_df['Transcript_ID'] = vcf_df['HGVSc'].str.split(':').apply(
+        lambda x: ','.join((y for y in x if y.startswith('NM')))
+    )
+    vcf_df['HGVSc'] = vcf_df['HGVSc'].str.split(':').apply(
+        lambda x: ','.join((y for y in x if y.startswith('c')))
+    )
+    vcf_df['Protein_ID'] = vcf_df['HGVSp'].str.split(':').apply(
+        lambda x: ','.join((y for y in x if y.startswith('NP')))
+    )
+    vcf_df['HGVSp'] = vcf_df['HGVSp'].str.split(':').apply(
+        lambda x: ','.join((y for y in x if y.startswith('p')))
+    )
 
     # add interestingly formatted report text column
     vcf_df['Report_text'] = vcf_df[vcf_df.columns.tolist()].apply(
         lambda x: (
-            f"{x['GENE']} {x['CONS']} "
+            f"{x['GENE']} {x['CONSEQ']} "
             f"{'in ' + x['EXON'] if x['EXON'] else ''} \n"
-            f"HGVSc: {x['HGVScshort'] if x['HGVScshort'] else 'None'} \n"
-            f"HGVSp: {x['HGVSpshort'] if x['HGVSpshort'] else 'None'} \n"
+            f"HGVSc: {x['HGVSc'] if x['HGVSc'] else 'None'} \n"
+            f"HGVSp: {x['HGVSp'] if x['HGVSp'] else 'None'} \n"
             f"COSMIC ID: {x['COSMIC'] if x['COSMIC'] else 'None'} \n"
-            f"Allele Frequency (VAF): {x['Mutect2_AF%'] if x['Mutect2_AF%'] else 'None'}"
+            f"dbSNP: {x['dbSNP'] if x['dbSNP'] else 'None'} \n"
+            f"Allele Frequency (VAF): {x['Mutect2_AF%'] if x['Mutect2_AF%']else 'None'}"
         ), axis=1
     )
 
-    # drop unneeded columns
-    vcf_df = vcf_df.drop(['INFO', 'DB', 'HGVScshort', 'HGVSpshort'], axis=1)
+    # select and re-order df columns
+    vcf_df = vcf_df[[
+        'CHROM', 'POS', 'GENE', 'Transcript_ID', 'EXON', 'HGVSc', 'HGVSp',
+        'Protein_ID', 'CONSEQ', 'Read_Depth', 'Mutect2_AF%', 'FILTER',
+        'ClinVar', 'ClinVar_CLNSIG', 'ClinVar_CLNDN', 'COSMIC', 'dbSNP',
+        'gnomAD_AF', 'CADD_PHRED', 'Prev_Count', 'Report_text'
+    ]]
 
     return vcf_df
 
@@ -289,12 +310,12 @@ def write_xlsx(fname, vcfs_dict):
     for panel_name, vcf_df in vcfs_dict.items():
         # loop over panel dfs, write to sheet & apply formatting
         vcf_df.to_excel(writer, sheet_name=panel_name)
-
         # fun excel formatting
         worksheet = writer.sheets[panel_name]
         wrap_format = workbook.add_format({'text_wrap': True})
-        worksheet.set_column('X:X', 70, wrap_format)
-        worksheet.set_default_row(80)
+        worksheet.set_column(1, 20, 15)
+        worksheet.set_column(21, 21, 70, wrap_format)
+        worksheet.set_default_row(100)
         worksheet.set_row(0, 15)
 
     writer.save()
@@ -326,8 +347,9 @@ if __name__ == "__main__":
 
     # apply formatting to each panel df for xlsx file
     for panel, vcf_df in vcfs_dict.items():
-        vcf_df = df_report_formatting(vcf_df)
-        vcfs_dict[panel] = vcf_df
+        if not vcf_df.empty:
+            vcf_df = df_report_formatting(vcf_df)
+            vcfs_dict[panel] = vcf_df
 
     # write output files, use name of allgenes vcf as prefix for all
     fname = str(Path(args.allgenes).name)
@@ -335,4 +357,3 @@ if __name__ == "__main__":
     write_bsvi_vcf(fname, bsvi_vcf_df, all_genes_df_header)
     write_tsv(fname, all_genes_df)
     write_xlsx(fname, vcfs_dict)
-
