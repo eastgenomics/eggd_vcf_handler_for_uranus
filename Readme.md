@@ -1,29 +1,36 @@
 # eggd vcf handler for uranus
 
-
 ## What does this app do?
-
-This app bundles up a set of assets to enable taking the VCFs from sentieon mutect2 and:
+### This app uses bedtools, bcftools and VEP to take VCFs from sentieon mutect2 and:
 - Annotates and filters the sentieon mutect2 VCF
-- Produces a tsv variant list that provides clinical scientists with a complete list of variants with some annotation and preformatted text for Epic
-- Produces a VCF that can be used as input for BSVI, which is incompatible with mutect2's (correct) representation of multiallelic variants in VCF
+- Produces a excel workbook with sub-panels presented in separate sheets; also provides preformatted text to aid Epic data entry
+- Produces a VCF that can be used as input for BSVI, as BSVI can't handle mutect2's (VCFv4.2 compliant) representation of multiallelic variants in VCF
 
 ## What are typical use cases for this app?
-This app uses the follow tools which are app assets:
+### This app uses the follow tools which are app assets:
 * bcftools (v1.12)
 * bedtools (v2.30.0)
-* VEP (v103.1) (docker image)
+* python_packages (numpy-1.20.1, pandas-1.2.3, pytz-2021.1, XlsxWriter-1.4.0)
 
-This app has access to the Internet
+### This app uses the following provided as inputs (these are all actually bundled into a single "VEP_tarball"):
+* VEP (v103.1) (docker image)
+* VEP refseq (v103) annotation sources
+* CADD (v1.6) which now includes splicing
+* ClinVar VCF (20210501 release) modified to add chr prefix
+* 138 merge VCF containing counts of each variant detected in first 138 samples
+
+### This app has access to the Internet
 
 ## What data are required for this app to run?
-- VCF outputted by sentieon mutect2 as part of Uranus workflow
-- BED file that details ROIs for myeloid NGS panel
-- Genome FASTA and index that was used by to generate the VCF
+- VCF output from sentieon mutect2 as part of Uranus workflow
+- BED file that details ROIs for myeloid NGS panel (default specified)
+- Genome FASTA and index that was used by to generate the VCF (default specified)
+- VEP tarball consisting of VEP docker, plugins and annotation sources (default specified)
 
 ## What does this app output?
-- TSV variant list
+- Excel workbook of annotated variants
 - BSVI-friendly VCF
+- Intermediate VCFs
 
 ## How does this app work?
 - Filters VCF with bedtools:
@@ -31,7 +38,7 @@ This app has access to the Internet
 - Filters VCF with bcftools:
     - retain positions where at least one variant has AF > 0.03
     - retain positions where DP >99
-    - split multiallelics using --keep-sum AD which changes the ref AD to be the sum of AD's
+    - split multiallelics using `--keep-sum AD` which changes the ref AD to be the sum of AD's
     - split multiallelics requires fixing AD and RPA number field in header from `.` to `R`
 - Annotates VCF with VEP:
     - Annotate against specified refseq transcripts with
@@ -46,11 +53,13 @@ This app has access to the Internet
         - dbSNP
         - COSMIC
         - ClinVar
+        - CADD
+        - previous counts
 - Filters VCF with VEP:
     - Retain variants with gnomAD AF < 0.1
     - Remove synonymous variants
-- Generates TSV variant list
-- Generate BSVI-friendly VCF
+- Generates variant lists (one panel per sheet) in an excel workbook
+- Generates BSVI-friendly VCF
 
 ## Limitations
 - Designed to be used as part of Uranus workflow for processing myeloid NGS panel
