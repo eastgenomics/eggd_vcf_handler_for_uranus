@@ -370,8 +370,9 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
 mark-section "BSVI workaround (overwriting GT) and creating variant list"
 # install required python packages (asset)
 pip3 install /pytz-*.whl /numpy-*.whl /pandas-*.whl /XlsxWriter-*.whl
-# call Python script (asset) to spit multiallelics
-# and generate BSVI VCF & text report
+# call Python script (asset) to spit multiallelics, generate BSVI VCF 
+# and excel report
+# note that order of VCFs passed to -v determines order of sheets in excel
 python3 vcf_handler.py -a "${allgenesvepfile}" \
   -v "${myeloidvepfile}" "${cllvepfile}" "${tp53vepfile}" "${lglvepfile}" \
   "${hclvepfile}" "${lplvepfile}" "${lymphoidvepfile}"

@@ -99,9 +99,6 @@ def read_vcf(input_vcf):
     # read vcf into df
     vcf_df = pd.read_csv(vcf_data, sep="\t", comment='#', names=cols)
 
-    if vcf_df.empty:
-        print('DataFrame is empty!')
-
     return vcf_df, vcf_header
 
 
@@ -148,12 +145,6 @@ def df_report_formatting(vcf_df):
     Returns:
         - vcf_df (df): df of variants with fun formatting
     """
-
-    # sense check correct annotation has been added to all rows else it
-    # gives an unhelpful pandas error on trying to split
-    assert all(vcf_df.INFO.str.count(r'\|') == 13), \
-        "Unexpected number (<>13) of field seperators (|) in INFO field"
-
     # Get DP field from INFO column, use join instead of
     # using index in case of missing and being empty => index error
     vcf_df['Read_Depth'] = vcf_df['INFO'].str.split(';').apply(
@@ -176,7 +167,7 @@ def df_report_formatting(vcf_df):
     ]
 
     # splits info column to cols defined in info_cols
-    vcf_df[info_cols] = vcf_df['INFO'].str.split('|', 13, expand=True)
+    vcf_df[info_cols] = vcf_df['INFO'].str.split('|', -1, expand=True)
 
     # remove info id from gene
     vcf_df['GENE'] = vcf_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
@@ -244,13 +235,7 @@ def df_report_formatting(vcf_df):
         ), axis=1
     )
 
-    # drop unneeded columns
-    vcf_df = vcf_df.drop([
-        'ID', 'REF', 'ALT', 'QUAL', 'INFO', 'FORMAT', 'SAMPLE',
-        'DB'
-    ], axis=1)
-
-    # re-order df columns
+    # select and re-order df columns
     vcf_df = vcf_df[[
         'CHROM', 'POS', 'GENE', 'Transcript_ID', 'EXON', 'HGVSc', 'HGVSp',
         'Protein_ID', 'CONSEQ', 'Read_Depth', 'Mutect2_AF%', 'FILTER',
