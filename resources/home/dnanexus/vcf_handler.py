@@ -133,7 +133,7 @@ def mod_genotype(vcf_df):
     return vcf_df
 
 
-def df_report_formatting(vcf_df):
+def df_report_formatting(fname, vcf_df):
     """
     Formats df of vcf records for report with INFO column split out to
     individual columns. Expects min. 14 '|' separated fields in INFO
@@ -188,7 +188,8 @@ def df_report_formatting(vcf_df):
     # get AF values from sample column add to new AF column, convert to %
     af_index = af_index[0]
     af_values = vcf_df['SAMPLE'].apply(lambda x: x.split(':')[af_index]).apply(
-        lambda x: '{:.1%}'.format(float(x)))
+        lambda x: format(float(x)*100)).apply(
+        lambda x: '{:.1f}'.format(float(x)))
     vcf_df.insert(16, 'Mutect2_AF%', af_values)
 
     # split messy DB annotation column out to clinvar, cosmic & dbsnp
@@ -221,6 +222,9 @@ def df_report_formatting(vcf_df):
     vcf_df['HGVSp'] = vcf_df['HGVSp'].str.split(':').apply(
         lambda x: ','.join((y for y in x if y.startswith('p')))
     )
+    regex = re.compile(r'^[p\.]*')
+    vcf_df['HGVSp'] = vcf_df['HGVSp'].apply(
+        lambda x: regex.sub('p.(', x) + ')' if x else None)
 
     # add interestingly formatted report text column
     vcf_df['Report_text'] = vcf_df[vcf_df.columns.tolist()].apply(
@@ -231,13 +235,20 @@ def df_report_formatting(vcf_df):
             f"HGVSp: {x['HGVSp'] if x['HGVSp'] else 'None'} \n"
             f"COSMIC ID: {x['COSMIC'] if x['COSMIC'] else 'None'} \n"
             f"dbSNP: {x['dbSNP'] if x['dbSNP'] else 'None'} \n"
-            f"Allele Frequency (VAF): {x['Mutect2_AF%'] if x['Mutect2_AF%']else 'None'}"
+            f"Allele Frequency (VAF): {x['Mutect2_AF%'] + '%' if x['Mutect2_AF%']else 'None'}"
         ), axis=1
     )
 
+    # get sample name from filename (should always be >>20 characters)
+    if len(fname) > 19:
+        samplename = fname[0:20] + '...'
+    else:
+        samplename = fname
+    vcf_df['samplename'] = samplename
+
     # select and re-order df columns
     vcf_df = vcf_df[[
-        'CHROM', 'POS', 'GENE', 'Transcript_ID', 'EXON', 'HGVSc', 'HGVSp',
+        'samplename', 'CHROM', 'POS', 'GENE', 'Transcript_ID', 'EXON', 'HGVSc', 'HGVSp',
         'Protein_ID', 'CONSEQ', 'Read_Depth', 'Mutect2_AF%', 'FILTER',
         'ClinVar', 'ClinVar_CLNSIG', 'ClinVar_CLNDN', 'COSMIC', 'dbSNP',
         'gnomAD_AF', 'CADD_PHRED', 'Prev_Count', 'Report_text'
@@ -313,8 +324,8 @@ def write_xlsx(fname, vcfs_dict):
         # fun excel formatting
         worksheet = writer.sheets[panel_name]
         wrap_format = workbook.add_format({'text_wrap': True})
-        worksheet.set_column(1, 20, 15)
-        worksheet.set_column(21, 21, 70, wrap_format)
+        worksheet.set_column(1, 21, 15)
+        worksheet.set_column(22, 22, 70, wrap_format)
         worksheet.set_default_row(100)
         worksheet.set_row(0, 15)
 
@@ -342,17 +353,17 @@ if __name__ == "__main__":
     bsvi_vcf_df = all_genes_df.copy(deep=True)
     bsvi_vcf_df = mod_genotype(bsvi_vcf_df)
 
+    # get filename, use name of allgenes vcf as prefix for all
+    fname = str(Path(args.allgenes).name)
+
     # apply formatting to allgenes vcf df for tsv file
-    all_genes_df = df_report_formatting(all_genes_df)
+    all_genes_df = df_report_formatting(fname, all_genes_df)
 
     # apply formatting to each panel df for xlsx file
     for panel, vcf_df in vcfs_dict.items():
         if not vcf_df.empty:
-            vcf_df = df_report_formatting(vcf_df)
+            vcf_df = df_report_formatting(fname, vcf_df)
             vcfs_dict[panel] = vcf_df
-
-    # write output files, use name of allgenes vcf as prefix for all
-    fname = str(Path(args.allgenes).name)
 
     write_bsvi_vcf(fname, bsvi_vcf_df, all_genes_df_header)
     write_tsv(fname, all_genes_df)
