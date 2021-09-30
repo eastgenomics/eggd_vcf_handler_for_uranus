@@ -63,6 +63,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./vep -i /opt/vep/.vep/"${splitfile}" -o /opt/vep/.vep/"${allgenesfile}" \
   --vcf --cache --refseq --exclude_predicted --symbol --hgvs --af_gnomad \
   --check_existing --variant_class --numbers \
+  --offline \
   --custom /opt/vep/.vep/clinvar_withchr_20210501.vcf.gz,ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
   --custom /opt/vep/.vep/138_merge_sort.vcf.gz,Prev,vcf,exact,0,AC,NS \
   --plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
@@ -130,13 +131,16 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   or stable_id match NM_001042750 \
   or stable_id match NM_001184772 \
   or stable_id match NM_001015877"
+
 # run vep filtering to remove high AF and outside genelist
 allgenesvepfile="${vcf_prefix}_allgenesvep.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
   ensemblorg/ensembl-vep:release_103.1 \
   ./filter_vep -i /opt/vep/.vep/"${allgenesfile}" \
   -o /opt/vep/.vep/"${allgenesvepfile}" --only_matched --filter \
-  "(gnomAD_AF < 0.10 or not gnomAD_AF)"
+  "(gnomAD_AF < 0.10 or not gnomAD_AF)" \
+  --offline
+
 # run vep for lymphoid genes list
 lymphoidfile="${vcf_prefix}_lymphoid.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -144,6 +148,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./vep -i /opt/vep/.vep/"${splitfile}" -o /opt/vep/.vep/"${lymphoidfile}" \
   --vcf --cache --refseq --exclude_predicted --symbol --hgvs --af_gnomad \
   --check_existing --variant_class --numbers \
+  --offline \
   --custom /opt/vep/.vep/clinvar_withchr_20210501.vcf.gz,ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
   --custom /opt/vep/.vep/138_merge_sort.vcf.gz,Prev,vcf,exact,0,AC,NS \
   --plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
@@ -167,6 +172,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   or stable_id match NM_139276 \
   or stable_id match NM_012448 \
   or stable_id match NM_000546"
+
 # run vep filtering to remove high AF and outside genelist
 lymphoidvepfile="${vcf_prefix}_pan-lymphoidvep.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -174,6 +180,8 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${lymphoidfile}" \
   -o /opt/vep/.vep/"${lymphoidvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
+  --offline
+
 # run vep for myeloid genes list
 myeloidfile="${vcf_prefix}_myeloid.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -181,6 +189,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./vep -i /opt/vep/.vep/"${splitfile}" -o /opt/vep/.vep/"${myeloidfile}" \
   --vcf --cache --refseq --exclude_predicted --symbol --hgvs --af_gnomad \
   --check_existing --variant_class --numbers \
+  --offline \
   --custom /opt/vep/.vep/clinvar_withchr_20210501.vcf.gz,ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
   --custom /opt/vep/.vep/138_merge_sort.vcf.gz,Prev,vcf,exact,0,AC,NS \
   --plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
@@ -242,6 +251,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   or stable_id match NM_006758 \
   or stable_id match NM_024426 \
   or stable_id match NM_005089"
+
 # run vep filtering to remove high AF and outside genelist
 myeloidvepfile="${vcf_prefix}_myeloidvep.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -249,6 +259,8 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${myeloidfile}" \
   -o /opt/vep/.vep/"${myeloidvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
+  --offline
+
 # run vep for CLL_Extended genes list
 cllfile="${vcf_prefix}_CLL-extended.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -256,6 +268,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./vep -i /opt/vep/.vep/"${splitfile}" -o /opt/vep/.vep/"${cllfile}" \
   --vcf --cache --refseq --exclude_predicted --symbol --hgvs --af_gnomad \
   --check_existing --variant_class --numbers \
+  --offline \
   --custom /opt/vep/.vep/clinvar_withchr_20210501.vcf.gz,ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
   --custom /opt/vep/.vep/138_merge_sort.vcf.gz,Prev,vcf,exact,0,AC,NS \
   --plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
@@ -273,6 +286,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   or stable_id match NM_002524 \
   or stable_id match NM_012433 \
   or stable_id match NM_000546"
+
 # run vep filtering to remove high AF and outside genelist
 cllvepfile="${vcf_prefix}_CLL-extendedvep.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -280,6 +294,8 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${cllfile}" \
   -o /opt/vep/.vep/"${cllvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
+  --offline
+
 # run vep for TP53
 tp53file="${vcf_prefix}_TP53.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -287,6 +303,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./vep -i /opt/vep/.vep/"${splitfile}" -o /opt/vep/.vep/"${tp53file}" \
   --vcf --cache --refseq --exclude_predicted --symbol --hgvs --af_gnomad \
   --check_existing --variant_class --numbers \
+  --offline \
   --custom /opt/vep/.vep/clinvar_withchr_20210501.vcf.gz,ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
   --custom /opt/vep/.vep/138_merge_sort.vcf.gz,Prev,vcf,exact,0,AC,NS \
   --plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
@@ -294,6 +311,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   "SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,Prev_AC,Prev_NS" \
   --no_stats --transcript_filter \
   "stable_id match NM_000546"
+
 # run vep filtering to remove high AF and outside genelist
 tp53vepfile="${vcf_prefix}_TP53vep.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -301,6 +319,8 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${tp53file}" \
   -o /opt/vep/.vep/"${tp53vepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
+  --offline
+
 # run vep for LGL
 lglfile="${vcf_prefix}_LGL.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -308,6 +328,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./vep -i /opt/vep/.vep/"${splitfile}" -o /opt/vep/.vep/"${lglfile}" \
   --vcf --cache --refseq --exclude_predicted --symbol --hgvs --af_gnomad \
   --check_existing --variant_class --numbers \
+  --offline \
   --custom /opt/vep/.vep/clinvar_withchr_20210501.vcf.gz,ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
   --custom /opt/vep/.vep/138_merge_sort.vcf.gz,Prev,vcf,exact,0,AC,NS \
   --plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
@@ -316,6 +337,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   --no_stats --transcript_filter \
   "stable_id match NM_139276 \
   or stable_id match NM_012448"
+
 # run vep filtering to remove high AF and outside genelist
 lglvepfile="${vcf_prefix}_LGLvep.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -323,6 +345,8 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${lglfile}" \
   -o /opt/vep/.vep/"${lglvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
+  --offline
+
 # run vep for HCL
 hclfile="${vcf_prefix}_HCL.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -330,6 +354,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./vep -i /opt/vep/.vep/"${splitfile}" -o /opt/vep/.vep/"${hclfile}" \
   --vcf --cache --refseq --exclude_predicted --symbol --hgvs --af_gnomad \
   --check_existing --variant_class --numbers \
+  --offline \
   --custom /opt/vep/.vep/clinvar_withchr_20210501.vcf.gz,ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
   --custom /opt/vep/.vep/138_merge_sort.vcf.gz,Prev,vcf,exact,0,AC,NS \
   --plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
@@ -337,6 +362,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   "SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,Prev_AC,Prev_NS" \
   --no_stats --transcript_filter \
   "stable_id match NM_004333"
+
 # run vep filtering to remove high AF and outside genelist
 hclvepfile="${vcf_prefix}_HCLvep.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -344,6 +370,8 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${hclfile}" \
   -o /opt/vep/.vep/"${hclvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
+  --offline
+
 # run vep for LPL
 lplfile="${vcf_prefix}_LPL.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -351,6 +379,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./vep -i /opt/vep/.vep/"${splitfile}" -o /opt/vep/.vep/"${lplfile}" \
   --vcf --cache --refseq --exclude_predicted --symbol --hgvs --af_gnomad \
   --check_existing --variant_class --numbers \
+  --offline \
   --custom /opt/vep/.vep/clinvar_withchr_20210501.vcf.gz,ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
   --custom /opt/vep/.vep/138_merge_sort.vcf.gz,Prev,vcf,exact,0,AC,NS \
   --plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
@@ -358,6 +387,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   "SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,Prev_AC,Prev_NS" \
   --no_stats --transcript_filter \
   "stable_id match NM_002468"
+
 # run vep filtering to remove high AF and outside genelist
 lplvepfile="${vcf_prefix}_LPLvep.vcf"
 docker run -v /home/dnanexus:/opt/vep/.vep \
@@ -365,6 +395,7 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${lplfile}" \
   -o /opt/vep/.vep/"${lplvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
+  --offline
 
 
 mark-section "BSVI workaround (overwriting GT) and creating variant list"
