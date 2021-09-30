@@ -139,7 +139,6 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${allgenesfile}" \
   -o /opt/vep/.vep/"${allgenesvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF)" \
-  --offline
 
 # run vep for lymphoid genes list
 lymphoidfile="${vcf_prefix}_lymphoid.vcf"
@@ -180,7 +179,6 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${lymphoidfile}" \
   -o /opt/vep/.vep/"${lymphoidvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
-  --offline
 
 # run vep for myeloid genes list
 myeloidfile="${vcf_prefix}_myeloid.vcf"
@@ -259,7 +257,6 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${myeloidfile}" \
   -o /opt/vep/.vep/"${myeloidvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
-  --offline
 
 # run vep for CLL_Extended genes list
 cllfile="${vcf_prefix}_CLL-extended.vcf"
@@ -294,7 +291,6 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${cllfile}" \
   -o /opt/vep/.vep/"${cllvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
-  --offline
 
 # run vep for TP53
 tp53file="${vcf_prefix}_TP53.vcf"
@@ -319,7 +315,6 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${tp53file}" \
   -o /opt/vep/.vep/"${tp53vepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
-  --offline
 
 # run vep for LGL
 lglfile="${vcf_prefix}_LGL.vcf"
@@ -345,7 +340,6 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${lglfile}" \
   -o /opt/vep/.vep/"${lglvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
-  --offline
 
 # run vep for HCL
 hclfile="${vcf_prefix}_HCL.vcf"
@@ -370,7 +364,6 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${hclfile}" \
   -o /opt/vep/.vep/"${hclvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
-  --offline
 
 # run vep for LPL
 lplfile="${vcf_prefix}_LPL.vcf"
@@ -395,7 +388,6 @@ docker run -v /home/dnanexus:/opt/vep/.vep \
   ./filter_vep -i /opt/vep/.vep/"${lplfile}" \
   -o /opt/vep/.vep/"${lplvepfile}" --only_matched --filter \
   "(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
-  --offline
 
 
 mark-section "BSVI workaround (overwriting GT) and creating variant list"
