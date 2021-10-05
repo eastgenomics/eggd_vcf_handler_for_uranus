@@ -4,14 +4,13 @@
 # Generates an excel workbook to aid variant interpretation
 # Also generates a workaround for BSVI mis-handling multiallelics
 
-# Function to run VEP for annotation of VCF file
 function annotate_vep_vcf {
-	set -e -x -v -o pipefail
-
+	# Function to run VEP for annotation on given VCF file
 	# Inputs:
-	# 	$1 -> input vcf (splitfile currently for all)
-	# 	$2 -> name for output vcf
-	# 	$3 -> list of comma separated transcripts to filter on
+	# $1 -> input vcf (splitfile currently for all)
+	# $2 -> name for output vcf
+	# $3 -> list of comma separated transcripts to filter on
+
 	input_vcf="$1"
 	output_vcf="$2"
 	transcript_list="$3"
@@ -38,13 +37,12 @@ function annotate_vep_vcf {
 	--no_stats --transcript_filter "$transcript_list"
 }
 
-# Function to filter annotated VCF with VEP to retain variants with AF < 0.10 in gnomAD
 function filter_vep_vcf {
-	set -e -x -v -o pipefail
-
+	# Function to filter annotated VCF with VEP to retain variants with AF < 0.10 in gnomAD
 	# Inputs:
-	# 	$1 -> input vcf
-	# 	$2 -> output_vcf
+	# 	$1 -> input vcf (should be output vcf of annotation)
+	# 	$2 -> name for output_vcf
+
 	input_vcf=$1
 	output_vcf=$2
 
@@ -71,6 +69,7 @@ main() {
 	#   be undone with bcftools norm -m +any
 	# bedtools and bcftools are app assets
 	splitfile="${vcf_prefix}_split.vcf"
+
 	time bedtools intersect -header -a "${vcf_path}" -b "${bed_path}" \
 	| bcftools view -i "FORMAT/AF[*]>0.03" - \
 	| bcftools view -i "DP>99" - \
