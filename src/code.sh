@@ -6,6 +6,7 @@
 
 function annotate_vep_vcf {
 	# Function to run VEP for annotation on given VCF file
+
 	# Inputs:
 	# $1 -> input vcf (splitfile currently for all)
 	# $2 -> name for output vcf
@@ -39,6 +40,7 @@ function annotate_vep_vcf {
 
 function filter_vep_vcf {
 	# Function to filter annotated VCF with VEP to retain variants with AF < 0.10 in gnomAD
+
 	# Inputs:
 	# 	$1 -> input vcf (should be output vcf of annotation)
 	# 	$2 -> name for output_vcf
@@ -78,22 +80,18 @@ main() {
 	| bcftools norm -f "${mutect2_fasta_path}" -m -any --keep-sum AD - \
 	-o ~/"${splitfile}"
 
-
 	mark-section "annotating and further filtering"
 	# vep needs permissions to write to /home/dnanexus
 	chmod a+rwx /home/dnanexus
 	# extract vep tarball (input) to /home/dnanexus
 	time tar xf "${vep_tarball_path}" -C /home/dnanexus
-	# extract annotation tarball to /home/dnanexus, using pre-compiled pigz to speed up decompression
+	# extract annotation tarball to /home/dnanexus, uses pre-compiled pigz to speed up decompression
 	time tar -I ~/pigz-2.6/pigz -xf ~/homo_sapiens_refseq_vep_103_GRCh38.tar.gz
 
 	# place fasta and indexes for VEP in the annotation folder
-	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz \
-	~/homo_sapiens_refseq/103_GRCh38/
-	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz.fai \
-	~/homo_sapiens_refseq/103_GRCh38/
-	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz.gzi \
-	~/homo_sapiens_refseq/103_GRCh38/
+	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz ~/homo_sapiens_refseq/103_GRCh38/
+	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz.fai ~/homo_sapiens_refseq/103_GRCh38/
+	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz.gzi ~/homo_sapiens_refseq/103_GRCh38/
 
 	# place plugins into plugins folder
 	mkdir ~/Plugins
@@ -106,12 +104,14 @@ main() {
 	# will run vep to annotate against specified transcripts for all, lymphoid
 	# and myeloid gene lists
 	# run vep for all genes list
-	all_genes_transcripts="NM_002074,NM_000760,NM_005373,NM_002227,NM_002524,NM_022552,NM_012433,NM_005896,\
-	NM_002468,NM_032638,NM_000222,NM_001127208,NM_033632,NM_002520,NM_016222,NM_006060,NM_181500,NM_004333,NM_004456,\
-	NM_170606,NM_006265,NM_004972,NM_016734,NM_017617,NM_000314,NM_005343,NM_024426,NM_001165,NM_000051,NM_001197104,\
-	NM_005188,NM_001987,NM_018638,NM_033360,NM_001136023,NM_005475,NM_002834,NM_004119,NM_002168,NM_004380,NM_000546,\
-	NM_001042492,NM_012448,NM_139276,NM_003620,NM_001195427,NM_015559,NM_004343,NM_004364,NM_015338,NM_080425,NM_001754,\
-	NM_006758,NM_007194,NM_001429,NM_005089,NM_001123385,NM_002049,NM_001042750,NM_001184772,NM_001015877"
+	all_genes_transcripts="NM_002074,NM_000760,NM_005373,NM_002227,NM_002524,NM_022552,NM_012433,\
+	NM_005896,NM_002468,NM_032638,NM_000222,NM_001127208,NM_033632,NM_002520,NM_016222,NM_006060,\
+	NM_181500,NM_004333,NM_004456,NM_170606,NM_006265,NM_004972,NM_016734,NM_017617,NM_000314,\
+	NM_005343,NM_024426,NM_001165,NM_000051,NM_001197104,NM_005188,NM_001987,NM_018638,NM_033360,\
+	NM_001136023,NM_005475,NM_002834,NM_004119,NM_002168,NM_004380,NM_000546,NM_001042492,\
+	NM_012448,NM_139276,NM_003620,NM_001195427,NM_015559,NM_004343,NM_004364,NM_015338,NM_080425,\
+	NM_001754,NM_006758,NM_007194,NM_001429,NM_005089,NM_001123385,NM_002049,NM_001042750,\
+	NM_001184772,NM_001015877"
 
 	allgenesfile="${vcf_prefix}_allgenes.vcf"
 
@@ -119,8 +119,9 @@ main() {
 	filter_vep_vcf "$allgenesfile" "${vcf_prefix}_allgenesvep.vcf" 
 
 	# run VEP for lymphoid genes list
-	lymphoid_transcripts="NM_000051,NM_001165,NM_004333,NM_004380,NM_001429,NM_004456,NM_033632,NM_005343,\
-	NM_033360,NM_002468,NM_017617,NM_002524,NM_016734,NM_012433,NM_139276,NM_012448,NM_000546"
+	lymphoid_transcripts="NM_000051,NM_001165,NM_004333,NM_004380,NM_001429,NM_004456,\
+	NM_033632,NM_005343,NM_033360,NM_002468,NM_017617,NM_002524,NM_016734,NM_012433,\
+	NM_139276,NM_012448,NM_000546"
 
 	lymphoidfile="${vcf_prefix}_lymphoid.vcf"
 
@@ -128,12 +129,13 @@ main() {
 	filter_vep_vcf "${lymphoidfile}" "${vcf_prefix}_pan-lymphoidvep.vcf"
 
 	# run VEP for myeloid genes list
-	myeloid_transcripts="NM_015338,NM_001123385,NM_001184772,NM_004333,NM_004343,NM_005188,NM_004364,\
-	NM_007194,NM_000760,NM_181500,NM_016222,NM_022552,NM_018638,NM_001987,NM_004456,NM_033632,NM_004119,\
-	NM_002049,NM_032638,NM_080425,NM_002074,NM_005343,NM_005896,NM_002168,NM_006060,NM_002227,NM_004972,\
-	NM_000222,NM_001197104,NM_033360,NM_005373,NM_001042492,NM_001136023,NM_017617,NM_002520,NM_002524,\
-	NM_016734,NM_001015877,NM_003620,NM_000314,NM_002834,NM_006265,NM_001754,NM_015559,NM_012433,NM_005475,\
-	NM_001195427,NM_001042750,NM_139276,NM_012448,NM_001127208,NM_000546,NM_006758,NM_024426,NM_005089"
+	myeloid_transcripts="NM_015338,NM_001123385,NM_001184772,NM_004333,NM_004343,NM_005188,\
+	NM_004364,NM_007194,NM_000760,NM_181500,NM_016222,NM_022552,NM_018638,NM_001987,NM_004456,\
+	NM_033632,NM_004119,NM_002049,NM_032638,NM_080425,NM_002074,NM_005343,NM_005896,NM_002168,\
+	NM_006060,NM_002227,NM_004972,NM_000222,NM_001197104,NM_033360,NM_005373,NM_001042492,\
+	NM_001136023,NM_017617,NM_002520,NM_002524,NM_016734,NM_001015877,NM_003620,NM_000314,\
+	NM_002834,NM_006265,NM_001754,NM_015559,NM_012433,NM_005475,NM_001195427,NM_001042750,\
+	NM_139276,NM_012448,NM_001127208,NM_000546,NM_006758,NM_024426,NM_005089"
 
 	myeloidfile="${vcf_prefix}_myeloid.vcf"
 
@@ -141,7 +143,9 @@ main() {
 	filter_vep_vcf "${myeloidfile}" "${vcf_prefix}_myeloidvep.vcf"
 
 	# run VEP for CLL_Extended genes list
-	cll_transcripts="NM_001165,NM_004333,NM_033632,NM_005343,NM_033360,NM_002468,NM_017617,NM_002524,NM_012433,NM_000546"
+	cll_transcripts="NM_001165,NM_004333,NM_033632,NM_005343,NM_033360,NM_002468,NM_017617,\
+	NM_002524,NM_012433,NM_000546"
+
 	cllfile="${vcf_prefix}_CLL-extended.vcf"
 
 	annotate_vep_vcf "$splitfile" "$cllfile" "$cll_transcripts"
