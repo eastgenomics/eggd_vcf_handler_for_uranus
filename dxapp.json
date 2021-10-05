@@ -80,6 +80,12 @@
         }
       ],
       "optional": false
+    },
+    {
+      "name": "MAF_file",
+      "label": "MAF file",
+      "help": "MAF file created from X Myeloid samples sequenced on NovaSeqs",
+      "class": "string"
     }
   ],
   "outputSpec": [

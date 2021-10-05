@@ -17,7 +17,8 @@
 * VEP refseq (v103) annotation sources
 * CADD (v1.6) which now includes splicing
 * ClinVar VCF (20210501 release) modified to add chr prefix
-* 138 merge VCF containing counts of each variant detected in first 138 samples
+* merged VCF containing counts of each variant detected in X number of samples (provided as separate input from VEP_tarball)
+    * the process for generating this VCF and from what samples is documented [here]()
 
 ### This app has access to the Internet
 
