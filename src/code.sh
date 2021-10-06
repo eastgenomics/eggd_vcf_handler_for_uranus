@@ -85,8 +85,8 @@ main() {
 	chmod a+rwx /home/dnanexus
 	# extract vep tarball (input) to /home/dnanexus
 	time tar xf "${vep_tarball_path}" -C /home/dnanexus
-	# extract annotation tarball to /home/dnanexus, uses pre-compiled pigz to speed up decompression
-	time tar -I ~/pigz-2.6/pigz -xf ~/homo_sapiens_refseq_vep_103_GRCh38.tar.gz
+	# extract annotation tarball to /home/dnanexus
+	time tar xf ~/homo_sapiens_refseq_vep_103_GRCh38.tar.gz
 
 	# place fasta and indexes for VEP in the annotation folder
 	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz ~/homo_sapiens_refseq/103_GRCh38/
@@ -101,8 +101,11 @@ main() {
 	# load vep docker (asset)
 	docker load -i ~/vep_v103.1_docker.tar.gz
 
-	# will run vep to annotate against specified transcripts for all, lymphoid
-	# and myeloid gene lists
+	# will run VEP to annotate against specified transcripts for all,
+	# lymphoid and myeloid gene lists
+	# for each, a transcript list is used to annotate on, as well as a *file (input vcf) and a
+	# *vepfile (output VCF annotated and filtered by VEP)
+	
 	# run vep for all genes list
 	all_genes_transcripts="NM_002074,NM_000760,NM_005373,NM_002227,NM_002524,NM_022552,NM_012433,\
 	NM_005896,NM_002468,NM_032638,NM_000222,NM_001127208,NM_033632,NM_002520,NM_016222,NM_006060,\
@@ -114,9 +117,10 @@ main() {
 	NM_001184772,NM_001015877"
 
 	allgenesfile="${vcf_prefix}_allgenes.vcf"
+	allgenesvepfile="${vcf_prefix}_allgenesvep.vcf"
 
 	annotate_vep_vcf "$splitfile" "$allgenesfile" "$all_genes_transcripts"
-	filter_vep_vcf "$allgenesfile" "${vcf_prefix}_allgenesvep.vcf" 
+	filter_vep_vcf "$allgenesfile" "$allgenesvepfile"
 
 	# run VEP for lymphoid genes list
 	lymphoid_transcripts="NM_000051,NM_001165,NM_004333,NM_004380,NM_001429,NM_004456,\
@@ -124,9 +128,10 @@ main() {
 	NM_139276,NM_012448,NM_000546"
 
 	lymphoidfile="${vcf_prefix}_lymphoid.vcf"
+	lymphoidvepfile="${vcf_prefix}_pan-lymphoidvep.vcf"
 
 	annotate_vep_vcf "$splitfile" "$lymphoidfile" "$lymphoid_transcripts"
-	filter_vep_vcf "${lymphoidfile}" "${vcf_prefix}_pan-lymphoidvep.vcf"
+	filter_vep_vcf "${lymphoidfile}" "$lymphoidvepfile"
 
 	# run VEP for myeloid genes list
 	myeloid_transcripts="NM_015338,NM_001123385,NM_001184772,NM_004333,NM_004343,NM_005188,\
@@ -138,43 +143,49 @@ main() {
 	NM_139276,NM_012448,NM_001127208,NM_000546,NM_006758,NM_024426,NM_005089"
 
 	myeloidfile="${vcf_prefix}_myeloid.vcf"
+	myeloidvepfile="${vcf_prefix}_myeloidvep.vcf"
 
 	annotate_vep_vcf "$splitfile" "$myeloidfile" "$myeloid_transcripts"
-	filter_vep_vcf "${myeloidfile}" "${vcf_prefix}_myeloidvep.vcf"
+	filter_vep_vcf "${myeloidfile}" "$myeloidvepfile"
 
 	# run VEP for CLL_Extended genes list
 	cll_transcripts="NM_001165,NM_004333,NM_033632,NM_005343,NM_033360,NM_002468,NM_017617,\
 	NM_002524,NM_012433,NM_000546"
 
 	cllfile="${vcf_prefix}_CLL-extended.vcf"
+	cllvepfile="${vcf_prefix}_CLL-extendedvep.vcf"
 
 	annotate_vep_vcf "$splitfile" "$cllfile" "$cll_transcripts"
-	filter_vep_vcf "${cllfile}" "${vcf_prefix}_CLL-extendedvep.vcf"
+	filter_vep_vcf "${cllfile}" "$cllvepfile"
 
 	# run VEP for TP53
 	tp53file="${vcf_prefix}_TP53.vcf"
+	tp53vepfile="${vcf_prefix}_TP53vep.vcf"
 
 	annotate_vep_vcf "$splitfile" "$tp53file" "NM_000546"
-	filter_vep_vcf "${tp53file}" "${vcf_prefix}_TP53vep.vcf"
+	filter_vep_vcf "${tp53file}" "$tp53vepfile"
 
 	# run VEP for LGL
 	lgl_transcripts="NM_139276,NM_012448"
 	lglfile="${vcf_prefix}_LGL.vcf"
+	lglvepfile="${vcf_prefix}_LGLvep.vcf"
 
 	annotate_vep_vcf "$splitfile" "$lglfile" "$lgl_transcripts"
-	filter_vep_vcf "${lglfile}" "${vcf_prefix}_LGLvep.vcf"
+	filter_vep_vcf "${lglfile}" "$lglvepfile"
 
 	# run vep for HCL
 	hclfile="${vcf_prefix}_HCL.vcf"
+	hclvepfile="${vcf_prefix}_HCLvep.vcf"
 
 	annotate_vep_vcf "$splitfile" "$hclfile" "NM_004333"
-	filter_vep_vcf "${hclfile}" "${vcf_prefix}_HCLvep.vcf"
+	filter_vep_vcf "${hclfile}" "$hclvepfile"
 
 	# run vep for LPL
 	lplfile="${vcf_prefix}_LPL.vcf"
+	lplvepfile=${vcf_prefix}_LPLvep.vcf
 
 	annotate_vep_vcf "$splitfile" "$lplfile" "NM_002468"
-	filter_vep_vcf "${lplfile}" "${vcf_prefix}_LPLvep.vcf"
+	filter_vep_vcf "$lplfile" "$lplvepfile"
 
 
 	mark-section "BSVI workaround (overwriting GT) and creating variant list"
