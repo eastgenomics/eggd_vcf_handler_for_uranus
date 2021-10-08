@@ -32,7 +32,7 @@ function annotate_vep_vcf {
 	--check_existing --variant_class --numbers \
 	--offline \
 	--custom /opt/vep/.vep/clinvar_withchr_20210501.vcf.gz,ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
-	--custom /opt/vep/.vep/138_merge_sort.vcf.gz,Prev,vcf,exact,0,AC,NS \
+	--custom /opt/vep/.vep/"${maf_file}",Prev,vcf,exact,0,AC,NS \
 	--plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
 	--fields "$filter_fields"\
 	--no_stats --transcript_filter "$transcript_list"

@@ -71,21 +71,43 @@
       "help": "tarball containing VEP docker image, plugins and annotation sources",
       "class": "file",
       "patterns": ["vep*.tar"],
-      "default": {"$dnanexus_link": "file-G2K4XZQ433GXjVfF58jJ0F05"},
+      "default": {"$dnanexus_link": "file-G5PX9qj433Gjvv1F3Bf6KFqv"},
       "suggestions": [
         {
           "name": "001_Reference",
           "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103.1.3"
+          "path": "/assets/vep/vep_v103.1.4"
         }
       ],
       "optional": false
     },
     {
-      "name": "MAF_file",
+      "name": "maf_file",
       "label": "MAF file",
-      "help": "MAF file created from X Myeloid samples sequenced on NovaSeqs",
-      "class": "string"
+      "help": "MAF file created from Myeloid samples sequenced on NovaSeqs",
+      "class": "file",
+      "default": {"$dnanexus_link": "file-G5PXK90433GjKFq70yfz9qfZ"},
+      "suggestions": [
+        {
+          "name": "001_Reference",
+          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+          "path": "/annotation/b38/haemonc/novaseq_allele_frequencies"
+        }
+      ]
+    },
+    {
+      "name": "maf_file_tbi",
+      "label": "MAF file index",
+      "help": "index of MAF file",
+      "class": "file",
+      "default": {"$dnanexus_link": "file-G5PXKFj433Gv495095Z95pk1"},
+      "suggestions": [
+        {
+          "name": "001_Reference",
+          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+          "path": "/annotation/b38/haemonc/novaseq_allele_frequencies"
+        }
+      ]
     }
   ],
   "outputSpec": [
