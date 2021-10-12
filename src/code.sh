@@ -10,16 +10,16 @@ function annotate_vep_vcf {
 	# Inputs:
 	# $1 -> input vcf (splitfile currently for all)
 	# $2 -> name for output vcf
-	# $3 -> list of comma separated transcripts to filter on
+	# $3 -> list of comma separated transcripts to annotate and filter on
 
 	input_vcf="$1"
 	output_vcf="$2"
-	# transcript_list="$3"
+	transcript_list="$3"
 
 	# # transcript list should be comma separated, format for passing to VEP
-	# transcript_list=$(echo "$transcript_list" | sed 's/[[:space:]]//g')  # remove any whitespace
-	# transcript_list=$(echo "$transcript_list" | sed 's/,/ or stable_id match /g')
-	# transcript_list="stable_id match $transcript_list"
+	transcript_list=$(echo "$transcript_list" | sed 's/[[:space:]]//g')  # remove any whitespace
+	transcript_list=$(echo "$transcript_list" | sed 's/,/ or stable_id match /g')
+	transcript_list="stable_id match $transcript_list"
 	
 	# fields to filter on
 	# hard coded in function for now, can be made an input but all are the same
@@ -37,9 +37,9 @@ function annotate_vep_vcf {
 	--custom /opt/vep/.vep/"${clinvar_vcf}",ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
 	--custom /opt/vep/.vep/"${maf_file_name}",Prev,vcf,exact,0,AC,NS \
 	--plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
-	--fields "$filter_fields"\
-	--no_stats
-	#--transcript_filter "$transcript_list"
+	--fields "$filter_fields" \
+	--no_stats \
+	--transcript_filter "$transcript_list"
 }
 
 function filter_vep_vcf {
@@ -51,24 +51,12 @@ function filter_vep_vcf {
 
 	input_vcf="$1"
 	output_vcf="$2"
-	transcript_list="$3"
-
-	# transcript list should be comma separated, format for passing to VEP
-	transcript_list=$(echo "$transcript_list" | sed 's/[[:space:]]//g')  # remove any whitespace
-
-	if [[ $transcript_list =~ .*",".* ]]
-	# contains commas => multiple => use in
-	then
-		transcript_list="Feature in ${transcript_list}"
-	else
-		transcript_list="Feature is ${transcript_list}"
-	fi
 
 	time docker run -v /home/dnanexus:/opt/vep/.vep \
 	ensemblorg/ensembl-vep:release_103.1 \
 	./filter_vep -i /opt/vep/.vep/"$input_vcf" \
 	-o /opt/vep/.vep/"$output_vcf" --only_matched --filter \
-	"(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL and $transcript_list"
+	"(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
 }
 
 main() {
@@ -112,8 +100,6 @@ main() {
 	# extract annotation tarball to /home/dnanexus
 	time tar xf ~/homo_sapiens_refseq_vep_103_GRCh38.tar.gz
 
-	ls
-
 	# place fasta and indexes for VEP in the annotation folder
 	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz ~/homo_sapiens_refseq/103_GRCh38/
 	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz.fai ~/homo_sapiens_refseq/103_GRCh38/
@@ -131,11 +117,6 @@ main() {
 	# lymphoid and myeloid gene lists
 	# for each, a transcript list is used to annotate on, as well as a *file (input vcf) and a
 	# *vepfile (output VCF annotated and filtered by VEP)
-	
-	# annotate VCF with VEP
-	splitvepfile="${vcf_prefix}_split_filevep.vcf"
-	annotate_vep_vcf "$splitfile" "$splitvepfile"
-
 
 	# run vep for all genes list
 	all_genes_transcripts="NM_002074,NM_000760,NM_005373,NM_002227,NM_002524,NM_022552,NM_012433,\
@@ -147,13 +128,16 @@ main() {
 	NM_001754,NM_006758,NM_007194,NM_001429,NM_005089,NM_001123385,NM_002049,NM_001042750,\
 	NM_001184772,NM_001015877"
 
+	# annotate VCF with VEP and all gene transcripts
+	splitvepfile="${vcf_prefix}_split_filevep.vcf"
+	annotate_vep_vcf "$splitfile" "$splitvepfile" "$all_genes_transcripts"
+
 	allgenesfile="${vcf_prefix}_allgenes.vcf"
 	allgenesvepfile="${vcf_prefix}_allgenesvep.vcf"
 
-	# annotate_vep_vcf "$splitfile" "$allgenesfile" "$all_genes_transcripts"
-	# filter_vep_vcf "$allgenesfile" "$allgenesvepfile"
+	annotate_vep_vcf "$splitfile" "$allgenesfile" "$all_genes_transcripts"
+	filter_vep_vcf "$allgenesfile" "$allgenesvepfile"
 
-	filter_vep_vcf "$splitvepfile" "$allgenesvepfile" "$all_genes_transcripts"
 
 	# run VEP for lymphoid genes list
 	lymphoid_transcripts="NM_000051,NM_001165,NM_004333,NM_004380,NM_001429,NM_004456,\
@@ -163,11 +147,8 @@ main() {
 	lymphoidfile="${vcf_prefix}_lymphoid.vcf"
 	lymphoidvepfile="${vcf_prefix}_pan-lymphoidvep.vcf"
 
-	# annotate_vep_vcf "$splitfile" "$lymphoidfile" "$lymphoid_transcripts"
-	# filter_vep_vcf "${lymphoidfile}" "$lymphoidvepfile"
-
-	filter_vep_vcf "$splitvepfile" "$lymphoidvepfile" "$lymphoid_transcripts"
-
+	annotate_vep_vcf "$splitfile" "$lymphoidfile" "$lymphoid_transcripts"
+	filter_vep_vcf "${lymphoidfile}" "$lymphoidvepfile"
 
 	# run VEP for myeloid genes list
 	myeloid_transcripts="NM_015338,NM_001123385,NM_001184772,NM_004333,NM_004343,NM_005188,\
@@ -181,10 +162,8 @@ main() {
 	myeloidfile="${vcf_prefix}_myeloid.vcf"
 	myeloidvepfile="${vcf_prefix}_myeloidvep.vcf"
 
-	# annotate_vep_vcf "$splitfile" "$myeloidfile" "$myeloid_transcripts"
-	# filter_vep_vcf "${myeloidfile}" "$myeloidvepfile"
-
-	filter_vep_vcf "$splitvepfile" "$myeloidvepfile" "$myeloid_transcripts"
+	annotate_vep_vcf "$splitfile" "$myeloidfile" "$myeloid_transcripts"
+	filter_vep_vcf "${myeloidfile}" "$myeloidvepfile"
 
 	# run VEP for CLL_Extended genes list
 	cll_transcripts="NM_001165,NM_004333,NM_033632,NM_005343,NM_033360,NM_002468,NM_017617,\
@@ -193,52 +172,44 @@ main() {
 	cllfile="${vcf_prefix}_CLL-extended.vcf"
 	cllvepfile="${vcf_prefix}_CLL-extendedvep.vcf"
 
-	# annotate_vep_vcf "$splitfile" "$cllfile" "$cll_transcripts"
-	# filter_vep_vcf "${cllfile}" "$cllvepfile"
-
-	filter_vep_vcf "$splitvepfile" "$cllvepfile" "$cll_transcripts"
+	annotate_vep_vcf "$splitfile" "$cllfile" "$cll_transcripts"
+	filter_vep_vcf "${cllfile}" "$cllvepfile"
 
 	# run VEP for TP53
 	tp53file="${vcf_prefix}_TP53.vcf"
 	tp53vepfile="${vcf_prefix}_TP53vep.vcf"
 
-	# annotate_vep_vcf "$splitfile" "$tp53file" "NM_000546"
-	# filter_vep_vcf "${tp53file}" "$tp53vepfile"
-
-	filter_vep_vcf "$splitvepfile" "$tp53vepfile" "NM_000546"
+	annotate_vep_vcf "$splitfile" "$tp53file" "NM_000546"
+	filter_vep_vcf "${tp53file}" "$tp53vepfile"
 
 	# run VEP for LGL
 	lgl_transcripts="NM_139276,NM_012448"
 	lglfile="${vcf_prefix}_LGL.vcf"
 	lglvepfile="${vcf_prefix}_LGLvep.vcf"
 
-	# annotate_vep_vcf "$splitfile" "$lglfile" "$lgl_transcripts"
-	# filter_vep_vcf "${lglfile}" "$lglvepfile"
-
-	filter_vep_vcf "$splitvepfile" "$lglvepfile" "$lgl_transcripts"
+	annotate_vep_vcf "$splitfile" "$lglfile" "$lgl_transcripts"
+	filter_vep_vcf "${lglfile}" "$lglvepfile"
 
 	# run vep for HCL
 	hclfile="${vcf_prefix}_HCL.vcf"
 	hclvepfile="${vcf_prefix}_HCLvep.vcf"
 
-	# annotate_vep_vcf "$splitfile" "$hclfile" "NM_004333"
-	# filter_vep_vcf "${hclfile}" "$hclvepfile"
-
-	filter_vep_vcf "$splitvepfile" "$hclvepfile" "$NM_004333"
+	annotate_vep_vcf "$splitfile" "$hclfile" "NM_004333"
+	filter_vep_vcf "${hclfile}" "$hclvepfile"
 
 	# run vep for LPL
 	lplfile="${vcf_prefix}_LPL.vcf"
 	lplvepfile=${vcf_prefix}_LPLvep.vcf
 
-	# annotate_vep_vcf "$splitfile" "$lplfile" "NM_002468"
-	# filter_vep_vcf "$lplfile" "$lplvepfile"
-
-	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468"
+	annotate_vep_vcf "$splitfile" "$lplfile" "NM_002468"
+	filter_vep_vcf "$lplfile" "$lplvepfile"
 
 
 	mark-section "BSVI workaround (overwriting GT) and creating variant list"
+
 	# install required python packages (asset)
 	pip3 install /pytz-*.whl /numpy-*.whl /pandas-*.whl /XlsxWriter-*.whl
+
 	# call Python script (asset) to spit multiallelics, generate BSVI VCF and excel report
 	# note that order of VCFs passed to -v determines order of sheets in excel
 	time python3 vcf_handler.py -a "${allgenesvepfile}" \
@@ -268,8 +239,6 @@ main() {
 	mv ~/"${variantlist}" ~/out/text_report/
 	mv ~/"${excellist}" ~/out/excel_report/
 	
-
 	dx-upload-all-outputs --parallel
-
 	mark-success
 }
