@@ -1,13 +1,13 @@
 {
-  "name": "eggd_vcf_handler_for_uranus",
-  "title": "eggd_vcf_handler_for_uranus",
+  "name": "eggd_vcf_handler_for_uranus_v2.2.0",
+  "title": "eggd_vcf_handler_for_uranus_v2.2.0",
   "summary": "Annotates and filters VCF files for Uranus",
   "properties": {
-    "githubRelease": "2.1.0"
+    "githubRelease": "2.2.0"
   },
   "dxapi": "1.0.0",
   "openSource": true,
-  "version": "2.1.0",
+  "version": "2.2.0",
   "inputSpec": [
     {
       "name": "vcf",
