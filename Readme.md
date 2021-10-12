@@ -18,7 +18,7 @@
 * CADD (v1.6) which now includes splicing
 * ClinVar VCF (20210501 release) modified to add chr prefix
 * merged VCF containing counts of each variant detected in X number of samples (provided as separate input from VEP_tarball)
-    * the process for generating this VCF and from what samples is documented [here]()
+    * the process for generating this VCF and from what samples is documented [here](https://cuhbioinformatics.atlassian.net/wiki/spaces/URA/pages/2415591443/Creation+of+Myeloid+NovaSeq+samples+MAF+file)
 
 ### This app has access to the Internet
 
@@ -27,6 +27,7 @@
 - BED file that details ROIs for myeloid NGS panel (default specified)
 - Genome FASTA and index that was used by to generate the VCF (default specified)
 - VEP tarball consisting of VEP docker, plugins and annotation sources (default specified)
+- MAF file created from known set of samples (default specified)
 
 ## What does this app output?
 - Excel workbook of annotated variants
