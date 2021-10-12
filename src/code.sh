@@ -118,7 +118,7 @@ main() {
 	# for each, a transcript list is used to annotate on, as well as a *file (input vcf) and a
 	# *vepfile (output VCF annotated and filtered by VEP)
 
-	# run vep for all genes list
+	# full gene transcript list
 	all_genes_transcripts="NM_002074,NM_000760,NM_005373,NM_002227,NM_002524,NM_022552,NM_012433,\
 	NM_005896,NM_002468,NM_032638,NM_000222,NM_001127208,NM_033632,NM_002520,NM_016222,NM_006060,\
 	NM_181500,NM_004333,NM_004456,NM_170606,NM_006265,NM_004972,NM_016734,NM_017617,NM_000314,\
@@ -128,10 +128,12 @@ main() {
 	NM_001754,NM_006758,NM_007194,NM_001429,NM_005089,NM_001123385,NM_002049,NM_001042750,\
 	NM_001184772,NM_001015877"
 
-	# annotate VCF with VEP and all gene transcripts
+	# annotate full VCF with VEP and all gene transcripts
 	splitvepfile="${vcf_prefix}_split_filevep.vcf"
 	annotate_vep_vcf "$splitfile" "$splitvepfile" "$all_genes_transcripts"
 
+
+	# run vep for all gene transcripts
 	allgenesfile="${vcf_prefix}_allgenes.vcf"
 	allgenesvepfile="${vcf_prefix}_allgenesvep.vcf"
 
