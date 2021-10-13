@@ -163,11 +163,14 @@ def df_report_formatting(fname, vcf_df):
     info_cols = [
         'GENE', 'VARIANT_CLASS', 'CONSEQ', 'EXON', 'HGVSc', 'HGVSp',
         'gnomAD_AF', 'CADD_PHRED', 'DB', 'ClinVar', 'ClinVar_CLNDN',
-        'ClinVar_CLNSIG', 'Prev_AC', 'Prev_NS'
+        'ClinVar_CLNSIG', 'Prev_AC', 'Prev_NS', 'Feature'
     ]
 
     # splits info column to cols defined in info_cols
     vcf_df[info_cols] = vcf_df['INFO'].str.split('|', -1, expand=True)
+
+    # drop unndeeded Feature column (transcript field from vep filter)
+    vcf_df.drop(columns=['Feature'], inplace=True)
 
     # remove info id from gene
     vcf_df['GENE'] = vcf_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
@@ -188,7 +191,7 @@ def df_report_formatting(fname, vcf_df):
     # get AF values from sample column add to new AF column, convert to %
     af_index = af_index[0]
     af_values = vcf_df['SAMPLE'].apply(lambda x: x.split(':')[af_index]).apply(
-        lambda x: format(float(x)*100)).apply(
+        lambda x: format(float(x) * 100)).apply(
         lambda x: '{:.1f}'.format(float(x)))
     vcf_df.insert(16, 'Mutect2_AF%', af_values)
 
@@ -248,8 +251,8 @@ def df_report_formatting(fname, vcf_df):
 
     # select and re-order df columns
     vcf_df = vcf_df[[
-        'samplename', 'CHROM', 'POS', 'GENE', 'Transcript_ID', 'EXON', 'HGVSc', 'HGVSp',
-        'Protein_ID', 'CONSEQ', 'Read_Depth', 'Mutect2_AF%', 'FILTER',
+        'samplename', 'CHROM', 'POS', 'GENE', 'Transcript_ID', 'EXON', 'HGVSc',
+        'HGVSp', 'Protein_ID', 'CONSEQ', 'Read_Depth', 'Mutect2_AF%', 'FILTER',
         'ClinVar', 'ClinVar_CLNSIG', 'ClinVar_CLNDN', 'COSMIC', 'dbSNP',
         'gnomAD_AF', 'CADD_PHRED', 'Prev_Count', 'Report_text'
     ]]
