@@ -10,20 +10,13 @@ function annotate_vep_vcf {
 	# Inputs:
 	# $1 -> input vcf (splitfile currently for all)
 	# $2 -> name for output vcf
-	# $3 -> list of comma separated transcripts to annotate and filter on
 
 	input_vcf="$1"
 	output_vcf="$2"
-	transcript_list="$3"
-
-	# # transcript list should be comma separated, format for passing to VEP
-	transcript_list=$(echo "$transcript_list" | sed 's/[[:space:]]//g')  # remove any whitespace
-	transcript_list=$(echo "$transcript_list" | sed 's/,/ or stable_id match /g')
-	transcript_list="stable_id match $transcript_list"
 	
 	# fields to filter on
 	# hard coded in function for now, can be made an input but all are the same
-	filter_fields="SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,Prev_AC,Prev_NS"
+	filter_fields="SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,Prev_AC,Prev_NS,Feature"
 
 	# find clinvar vcf, remove leading ./
 	clinvar_vcf=$(find ./ -name "clinvar_*.vcf.gz" | sed s'/.\///')
@@ -38,8 +31,7 @@ function annotate_vep_vcf {
 	--custom /opt/vep/.vep/"${maf_file_name}",Prev,vcf,exact,0,AC,NS \
 	--plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
 	--fields "$filter_fields" \
-	--no_stats \
-	--transcript_filter "$transcript_list"
+	--no_stats
 }
 
 function filter_vep_vcf {
@@ -48,15 +40,28 @@ function filter_vep_vcf {
 	# Inputs:
 	# 	$1 -> input vcf (should be output vcf of annotation)
 	# 	$2 -> name for output_vcf
+	#   $3 -> comma separated list of transcripts
 
 	input_vcf="$1"
 	output_vcf="$2"
+	transcript_list="$3"
+
+	# transcript list should be comma separated, format for passing to VEP
+	transcript_list=$(echo "$transcript_list" | sed 's/[[:space:]]//g')  # remove any whitespace
+	
+	# vep filter with match uses regex, therefore we need to change any . to be escaped as \. to
+	# stop it being treat as any single character
+	transcript_list=$(echo "$transcript_list" | sed 's/\./\\./g')  
+	
+	# add required Feature match prepended to every transcript for filtering
+	transcript_list=$(echo "$transcript_list" | sed 's/,/ or Feature match /g')
+	transcript_list="(Feature match ${transcript_list})"
 
 	time docker run -v /home/dnanexus:/opt/vep/.vep \
 	ensemblorg/ensembl-vep:release_103.1 \
 	./filter_vep -i /opt/vep/.vep/"$input_vcf" \
 	-o /opt/vep/.vep/"$output_vcf" --only_matched --filter \
-	"(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL"
+	"(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL and $transcript_list"
 }
 
 main() {
@@ -119,92 +124,79 @@ main() {
 	# *vepfile (output VCF annotated and filtered by VEP)
 
 	# full gene transcript list
-	all_genes_transcripts="NM_002074,NM_000760,NM_005373,NM_002227,NM_002524,NM_022552,NM_012433,\
-	NM_005896,NM_002468,NM_032638,NM_000222,NM_001127208,NM_033632,NM_002520,NM_016222,NM_006060,\
-	NM_181500,NM_004333,NM_004456,NM_170606,NM_006265,NM_004972,NM_016734,NM_017617,NM_000314,\
-	NM_005343,NM_024426,NM_001165,NM_000051,NM_001197104,NM_005188,NM_001987,NM_018638,NM_033360,\
-	NM_001136023,NM_005475,NM_002834,NM_004119,NM_002168,NM_004380,NM_000546,NM_001042492,\
-	NM_012448,NM_139276,NM_003620,NM_001195427,NM_015559,NM_004343,NM_004364,NM_015338,NM_080425,\
-	NM_001754,NM_006758,NM_007194,NM_001429,NM_005089,NM_001123385,NM_002049,NM_001042750,\
-	NM_001184772,NM_001015877"
+	all_genes_transcripts="NM_002074.,NM_000760.,NM_005373.,NM_002227.,NM_002524.,NM_022552.,NM_012433.,\
+	NM_005896.,NM_002468.,NM_032638.,NM_000222.,NM_001127208.,NM_033632.,NM_002520.,NM_016222.,NM_006060.,\
+	NM_181500.,NM_004333.,NM_004456.,NM_170606.,NM_006265.,NM_004972.,NM_016734.,NM_017617.,NM_000314.,\
+	NM_005343.,NM_024426.,NM_001165.,NM_000051.,NM_001197104.,NM_005188.,NM_001987.,NM_018638.,NM_033360.,\
+	NM_001136023.,NM_005475.,NM_002834.,NM_004119.,NM_002168.,NM_004380.,NM_000546.,NM_001042492.,\
+	NM_012448.,NM_139276.,NM_003620.,NM_001195427.,NM_015559.,NM_004343.,NM_004364.,NM_015338.,NM_080425.,\
+	NM_001754.,NM_006758.,NM_007194.,NM_001429.,NM_005089.,NM_001123385.,NM_002049.,NM_001042750.,\
+	NM_001184772.,NM_001015877."
 
-	# annotate full VCF with VEP and all gene transcripts
+	# annotate full VCF with VEP
+	# outputs to $splitvepfile that is then filtered by transcript lists
 	splitvepfile="${vcf_prefix}_split_filevep.vcf"
-	annotate_vep_vcf "$splitfile" "$splitvepfile" "$all_genes_transcripts"
+	annotate_vep_vcf "$splitfile" "$splitvepfile"
 
 
-	# run vep for all gene transcripts
-	allgenesfile="${vcf_prefix}_allgenes.vcf"
+	# filter with VEP for all gene transcripts
 	allgenesvepfile="${vcf_prefix}_allgenesvep.vcf"
 
-	annotate_vep_vcf "$splitfile" "$allgenesfile" "$all_genes_transcripts"
-	filter_vep_vcf "$allgenesfile" "$allgenesvepfile"
+	filter_vep_vcf "$splitvepfile" "$allgenesvepfile" "$all_genes_transcripts"
 
 
-	# run VEP for lymphoid genes list
-	lymphoid_transcripts="NM_000051,NM_001165,NM_004333,NM_004380,NM_001429,NM_004456,\
-	NM_033632,NM_005343,NM_033360,NM_002468,NM_017617,NM_002524,NM_016734,NM_012433,\
-	NM_139276,NM_012448,NM_000546"
-
-	lymphoidfile="${vcf_prefix}_lymphoid.vcf"
+	# filter with VEP for lymphoid genes list
+	lymphoid_transcripts="NM_000051.,NM_001165.,NM_004333.,NM_004380.,NM_001429.,NM_004456.,\
+	NM_033632.,NM_005343.,NM_033360.,NM_002468.,NM_017617.,NM_002524.,NM_016734.,NM_012433.,\
+	NM_139276.,NM_012448.,NM_000546."
 	lymphoidvepfile="${vcf_prefix}_pan-lymphoidvep.vcf"
 
-	annotate_vep_vcf "$splitfile" "$lymphoidfile" "$lymphoid_transcripts"
-	filter_vep_vcf "${lymphoidfile}" "$lymphoidvepfile"
+	filter_vep_vcf "${splitvepfile}" "$lymphoidvepfile" "$lymphoid_transcripts"
 
-	# run VEP for myeloid genes list
-	myeloid_transcripts="NM_015338,NM_001123385,NM_001184772,NM_004333,NM_004343,NM_005188,\
-	NM_004364,NM_007194,NM_000760,NM_181500,NM_016222,NM_022552,NM_018638,NM_001987,NM_004456,\
-	NM_033632,NM_004119,NM_002049,NM_032638,NM_080425,NM_002074,NM_005343,NM_005896,NM_002168,\
-	NM_006060,NM_002227,NM_004972,NM_000222,NM_001197104,NM_033360,NM_005373,NM_001042492,\
-	NM_001136023,NM_017617,NM_002520,NM_002524,NM_016734,NM_001015877,NM_003620,NM_000314,\
-	NM_002834,NM_006265,NM_001754,NM_015559,NM_012433,NM_005475,NM_001195427,NM_001042750,\
-	NM_139276,NM_012448,NM_001127208,NM_000546,NM_006758,NM_024426,NM_005089"
-
-	myeloidfile="${vcf_prefix}_myeloid.vcf"
+	# filter with VEP for myeloid genes list
+	myeloid_transcripts="NM_015338.,NM_001123385.,NM_001184772.,NM_004333.,NM_004343.,NM_005188.,\
+	NM_004364.,NM_007194.,NM_000760.,NM_181500.,NM_016222.,NM_022552.,NM_018638.,NM_001987.,NM_004456.,\
+	NM_033632.,NM_004119.,NM_002049.,NM_032638.,NM_080425.,NM_002074.,NM_005343.,NM_005896.,NM_002168.,\
+	NM_006060.,NM_002227.,NM_004972.,NM_000222.,NM_001197104.,NM_033360.,NM_005373.,NM_001042492.,\
+	NM_001136023.,NM_017617.,NM_002520.,NM_002524.,NM_016734.,NM_001015877.,NM_003620.,NM_000314.,\
+	NM_002834.,NM_006265.,NM_001754.,NM_015559.,NM_012433.,NM_005475.,NM_001195427.,NM_001042750.,\
+	NM_139276.,NM_012448.,NM_001127208.,NM_000546.,NM_006758.,NM_024426.,NM_005089."
 	myeloidvepfile="${vcf_prefix}_myeloidvep.vcf"
 
-	annotate_vep_vcf "$splitfile" "$myeloidfile" "$myeloid_transcripts"
-	filter_vep_vcf "${myeloidfile}" "$myeloidvepfile"
+	filter_vep_vcf "${splitvepfile}" "$myeloidvepfile" "$myeloid_transcripts"
 
-	# run VEP for CLL_Extended genes list
-	cll_transcripts="NM_001165,NM_004333,NM_033632,NM_005343,NM_033360,NM_002468,NM_017617,\
-	NM_002524,NM_012433,NM_000546"
 
-	cllfile="${vcf_prefix}_CLL-extended.vcf"
+	# filter with VEP for CLL_Extended genes list
+	cll_transcripts="NM_001165.,NM_004333.,NM_033632.,NM_005343.,NM_033360.,NM_002468.,NM_017617.,\
+	NM_002524.,NM_012433.,NM_000546."
 	cllvepfile="${vcf_prefix}_CLL-extendedvep.vcf"
 
-	annotate_vep_vcf "$splitfile" "$cllfile" "$cll_transcripts"
-	filter_vep_vcf "${cllfile}" "$cllvepfile"
+	filter_vep_vcf "${splitvepfile}" "$cllvepfile" "$cll_transcripts"
 
-	# run VEP for TP53
-	tp53file="${vcf_prefix}_TP53.vcf"
+
+	# filter with VEP for TP53
 	tp53vepfile="${vcf_prefix}_TP53vep.vcf"
 
-	annotate_vep_vcf "$splitfile" "$tp53file" "NM_000546"
-	filter_vep_vcf "${tp53file}" "$tp53vepfile"
+	filter_vep_vcf "${splitvepfile}" "$tp53vepfile" "NM_000546."
 
-	# run VEP for LGL
-	lgl_transcripts="NM_139276,NM_012448"
-	lglfile="${vcf_prefix}_LGL.vcf"
+
+	# filter with VEP for LGL
+	lgl_transcripts="NM_139276.,NM_012448."
 	lglvepfile="${vcf_prefix}_LGLvep.vcf"
 
-	annotate_vep_vcf "$splitfile" "$lglfile" "$lgl_transcripts"
-	filter_vep_vcf "${lglfile}" "$lglvepfile"
+	filter_vep_vcf "${splitvepfile}" "$lglvepfile" "$lgl_transcripts"
+
 
 	# run vep for HCL
-	hclfile="${vcf_prefix}_HCL.vcf"
 	hclvepfile="${vcf_prefix}_HCLvep.vcf"
 
-	annotate_vep_vcf "$splitfile" "$hclfile" "NM_004333"
-	filter_vep_vcf "${hclfile}" "$hclvepfile"
+	filter_vep_vcf "${splitvepfile}" "$hclvepfile" "NM_004333."
+
 
 	# run vep for LPL
-	lplfile="${vcf_prefix}_LPL.vcf"
 	lplvepfile=${vcf_prefix}_LPLvep.vcf
 
-	annotate_vep_vcf "$splitfile" "$lplfile" "NM_002468"
-	filter_vep_vcf "$lplfile" "$lplvepfile"
+	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468."
 
 
 	mark-section "BSVI workaround (overwriting GT) and creating variant list"
