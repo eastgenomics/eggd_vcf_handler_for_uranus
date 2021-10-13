@@ -40,7 +40,7 @@ function filter_vep_vcf {
 	# Inputs:
 	# 	$1 -> input vcf (should be output vcf of annotation)
 	# 	$2 -> name for output_vcf
-	#   $3 -> comma separated list of transcripts
+	#	$3 -> comma separated list of transcripts
 
 	input_vcf="$1"
 	output_vcf="$2"
