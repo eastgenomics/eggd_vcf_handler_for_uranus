@@ -62,7 +62,7 @@ function filter_vep_vcf {
 	ensemblorg/ensembl-vep:release_103.1 \
 	./filter_vep -i /opt/vep/.vep/"$input_vcf" \
 	-o /opt/vep/.vep/"$output_vcf" --only_matched --filter \
-	"(gnomAD_AF < 0.10 or not gnomAD_AF) and SYMBOL and $transcript_list"
+	"(gnomAD_AF < 0.10 or not gnomAD_AF) and $transcript_list"
 }
 
 main() {
