@@ -35,7 +35,8 @@ function annotate_vep_vcf {
 }
 
 function filter_vep_vcf {
-	# Function to filter annotated VCF with VEP to retain variants with AF < 0.10 in gnomAD
+	# Function to filter annotated VCF with VEP to retain variants with AF < 0.10 in gnomAD, for
+	# a gene symbol being present and against a given list of transcripts
 
 	# Inputs:
 	# 	$1 -> input vcf (should be output vcf of annotation)
@@ -168,7 +169,7 @@ main() {
 
 	# filter with VEP for CLL_Extended genes list
 	cll_transcripts="NM_001165.,NM_004333.,NM_033632.,NM_005343.,NM_033360.,NM_002468.,NM_017617.,\
-	NM_002524.,NM_012433.,NM_000546."
+	NM_002524.,NM_012433.,NM_000546.,NM_000051."
 	cllvepfile="${vcf_prefix}_CLL-extendedvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$cllvepfile" "$cll_transcripts"
@@ -232,7 +233,7 @@ main() {
 	mv ~/"${bsvivcf}" ~/out/bsvi_vcf/
 	mv ~/"${variantlist}" ~/out/text_report/
 	mv ~/"${excellist}" ~/out/excel_report/
-	
+
 	dx-upload-all-outputs --parallel
 	mark-success
 }
