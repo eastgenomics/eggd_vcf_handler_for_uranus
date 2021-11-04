@@ -23,7 +23,7 @@ function annotate_vep_vcf {
 
 	# find CADD files, remove leading ./
 	cadd_snv=$(find ./ -name "*SNVs.tsv.gz")
-	cadd_indel=$(ifnd ./ -name "*indel.tsv.gz")
+	cadd_indel=$(find ./ -name "*indel.tsv.gz")
 
 	time docker run -v /home/dnanexus:/opt/vep/.vep \
 	ensemblorg/ensembl-vep:release_103.1 \
@@ -111,18 +111,11 @@ main() {
 	# vep needs permissions to write to /home/dnanexus
 	chmod a+rwx /home/dnanexus
 	
-	# extract vep tarball (input) to /home/dnanexus
-	# --transform used to ensure everything is extracted and not in a sub folder
-	# time tar xf "${vep_tarball_path}" -C /home/dnanexus --transform='s/.*\///'
-	
 	# extract vep reference annotation tarball to /home/dnanexus
 	time tar xf /home/dnanexus/in/vep_refs/*.tar.gz -C /home/dnanexus
 
 	# place fasta and indexes for VEP in the annotation folder
 	mv /home/dnanexus/in/vep_refs/*fa.gz* ~/homo_sapiens_refseq/103_GRCh38/
-	# mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz ~/homo_sapiens_refseq/103_GRCh38/
-	# mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz.fai ~/homo_sapiens_refseq/103_GRCh38/
-	# mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz.gzi ~/homo_sapiens_refseq/103_GRCh38/
 
 	# place plugins into plugins folder
 	mkdir ~/Plugins
