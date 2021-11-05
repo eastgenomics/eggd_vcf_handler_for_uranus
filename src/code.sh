@@ -21,6 +21,10 @@ function annotate_vep_vcf {
 	# find clinvar vcf, remove leading ./
 	clinvar_vcf=$(find ./ -name "clinvar_*.vcf.gz" | sed s'/.\///')
 
+	# find cosmic coding and non-coding vcfs
+	cosmic_coding=$(find ./ -name "CosmicCodingMuts*.vcf.gz" | sed s'/.\///')
+	cosmic_non_coding=$(find ./ -name "CosmicNonCodingVariants*.vcf.gz" | sed s'/.\///')
+
 	# find CADD files, remove leading ./
 	cadd_snv=$(find ./ -name "*SNVs.tsv.gz")
 	cadd_indel=$(find ./ -name "*indel.tsv.gz")
@@ -33,6 +37,8 @@ function annotate_vep_vcf {
 	--offline \
 	--custom /opt/vep/.vep/"${clinvar_vcf}",ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
 	--custom /opt/vep/.vep/"${maf_file_name}",Prev,vcf,exact,0,AC,NS \
+	--custom /opt/vep/.vep/"${cosmic_coding}",COSMIC,vcf,exact,0,ID \
+	--custom /opt/vep/.vep/"${cosmic_non_coding}",COSMIC,vcf,exact,0,ID \
 	--plugin CADD,/opt/vep/.vep/"${cadd_snv}",/opt/vep/.vep/"${cadd_indel}" \
 	--fields "$filter_fields" \
 	--no_stats
