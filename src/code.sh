@@ -21,6 +21,10 @@ function annotate_vep_vcf {
 	# find clinvar vcf, remove leading ./
 	clinvar_vcf=$(find ./ -name "clinvar_*.vcf.gz" | sed s'/.\///')
 
+	# find CADD files, remove leading ./
+	cadd_snv=$(find ./ -name "*SNVs.tsv.gz")
+	cadd_indel=$(find ./ -name "*indel.tsv.gz")
+
 	time docker run -v /home/dnanexus:/opt/vep/.vep \
 	ensemblorg/ensembl-vep:release_103.1 \
 	./vep -i /opt/vep/.vep/"${input_vcf}" -o /opt/vep/.vep/"${output_vcf}" \
@@ -29,7 +33,7 @@ function annotate_vep_vcf {
 	--offline \
 	--custom /opt/vep/.vep/"${clinvar_vcf}",ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
 	--custom /opt/vep/.vep/"${maf_file_name}",Prev,vcf,exact,0,AC,NS \
-	--plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
+	--plugin CADD,/opt/vep/.vep/"${cadd_snv}",/opt/vep/.vep/"${cadd_indel}" \
 	--fields "$filter_fields" \
 	--no_stats
 }
@@ -75,6 +79,14 @@ main() {
 	mv "${maf_file_path}" /home/dnanexus/
 	mv "${maf_file_tbi_path}" /home/dnanexus/
 
+	# array inputs end up in subdirectories (i.e. ~/in/array-input/0/), flatten to parent dir
+	find ~/in/vep_plugins -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_plugins
+	find ~/in/vep_refs -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_refs
+	find ~/in/vep_annotation -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_annotation
+
+	# move annotation sources to home
+	mv ~/in/vep_annotation/* /home/dnanexus/
+
 	mark-section "filtering and splitting multiallelics"
 	# retain variants that are: # within ROIs (bed file),
 	#   have at least one allele >0.03 AF, and have DP >99
@@ -99,25 +111,18 @@ main() {
 	# vep needs permissions to write to /home/dnanexus
 	chmod a+rwx /home/dnanexus
 	
-	# extract vep tarball (input) to /home/dnanexus
-	# --transform used to ensure everything is extracted and not in a sub folder
-	time tar xf "${vep_tarball_path}" -C /home/dnanexus --transform='s/.*\///'
-	
-	# extract annotation tarball to /home/dnanexus
-	time tar xf ~/homo_sapiens_refseq_vep_103_GRCh38.tar.gz
+	# extract vep reference annotation tarball to /home/dnanexus
+	time tar xf /home/dnanexus/in/vep_refs/*.tar.gz -C /home/dnanexus
 
 	# place fasta and indexes for VEP in the annotation folder
-	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz ~/homo_sapiens_refseq/103_GRCh38/
-	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz.fai ~/homo_sapiens_refseq/103_GRCh38/
-	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz.gzi ~/homo_sapiens_refseq/103_GRCh38/
+	mv /home/dnanexus/in/vep_refs/*fa.gz* ~/homo_sapiens_refseq/103_GRCh38/
 
 	# place plugins into plugins folder
 	mkdir ~/Plugins
-	mv ~/CADD.pm ~/Plugins/
-	mv ~/plugin_config.txt ~/Plugins/
+	mv ~/in/vep_plugins/* ~/Plugins/
 
-	# load vep docker (asset)
-	docker load -i ~/vep_v103.1_docker.tar.gz
+	# load vep docker
+	docker load -i "$vep_docker_path"
 
 	# will run VEP to annotate against specified transcripts for all,
 	# lymphoid and myeloid gene lists

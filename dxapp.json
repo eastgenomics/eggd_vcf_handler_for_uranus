@@ -66,20 +66,106 @@
       "optional": false
     },
     {
-      "name": "vep_tarball",
-      "label": "vep docker and annotation sources",
-      "help": "tarball containing VEP docker image, plugins and annotation sources",
+      "name": "vep_docker",
+      "label": "VEP docker image",
+      "help": "compressed docker image of VEP",
       "class": "file",
-      "patterns": ["vep*.tar"],
-      "default": {"$dnanexus_link": "file-G5PX9qj433Gjvv1F3Bf6KFqv"},
+      "patterns": ["*docker.tar.gz"],
+      "optional": false,
+      "default": {
+        "$dnanexus_link": "file-G61zff8433Gy2KQX7Q2z150B"
+      },
       "suggestions": [
         {
           "name": "001_Reference",
           "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-          "path": "/assets/vep/vep_v103.1.4"
+          "path": "/assets/vep/vep_docker_v103.1/"
+        }
+      ]
+    },
+    {
+      "name": "vep_plugins",
+      "label": "plugin files for VEP",
+      "help": "Associated plugin files for VEP",
+      "class": "array:file",
+      "optional": false,
+      "default": [
+        {
+          "$dnanexus_link": "file-G61zfvj433GxkQXF414xP1yF"
+        },
+        {
+          "$dnanexus_link": "file-G620928433Gy9p2b27zb8JFV"
         }
       ],
-      "optional": false
+      "suggestions": [
+        {
+          "name": "001_Reference",
+          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+          "path": "/assets/vep/vep_docker_v103.1/"
+        }
+      ]
+    },
+    {
+      "name": "vep_refs",
+      "label": "reference sources for VEP",
+      "help": "Reference file annotation sources for VEP (not ClinVar etc.)",
+      "class": "array:file",
+      "optional": false,
+      "default": [
+        {
+          "$dnanexus_link": "file-G61y95Q433Gk05zyFKF9kFv2"
+        },
+        {
+          "$dnanexus_link": "file-G61yBV8433GjbVj022PyV3K5"
+        },
+        {
+          "$dnanexus_link": "file-G61yBf0433Gp4BBVGj0jxqvP"
+        },
+        {
+          "$dnanexus_link": "file-G61yF38433GQgP504Px5PZ4G"
+        }
+      ],
+      "suggestions": [
+        {
+          "name": "001_Reference",
+          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+          "path": "/annotation/b38/vep/"
+        }
+      ]
+    },
+    {
+      "name": "vep_annotation",
+      "label": "annotation sources for VEP",
+      "help": "Reference file annotation sources for VEP and index (ClinVar & CADD)",
+      "class": "array:file",
+      "optional": false,
+      "default": [
+        {
+          "$dnanexus_link": "file-G61xXjj433GzPf7Q45Z7pf2z"
+        },
+        {
+          "$dnanexus_link": "file-G61xXyj433Gz7Bx5P8j7zbGy"
+        },
+        {
+          "$dnanexus_link": "file-G61xbP0433GqX36p8QQxP3PV"
+        },
+        {
+          "$dnanexus_link": "file-G61xf3j433Gz49jf6XjKG4F0"
+        },
+        {
+          "$dnanexus_link": "file-G61xfZ0433Gj2vJ7P8k9ky2Z"
+        },
+        {
+          "$dnanexus_link": "file-G61y4Y8433GvyjJ52Fj5XjY5"
+        }
+      ],
+      "suggestions": [
+        {
+          "name": "001_Reference",
+          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+          "path": "/annotation/b38/"
+        }
+      ]
     },
     {
       "name": "maf_file",
