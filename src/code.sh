@@ -16,7 +16,7 @@ function annotate_vep_vcf {
 	
 	# fields to filter on
 	# hard coded in function for now, can be made an input but all are the same
-	filter_fields="SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,COSMIC_ID,Prev_AC,Prev_NS,Feature"
+	filter_fields="SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,COSMIC,Prev_AC,Prev_NS,Feature"
 
 	# find clinvar vcf, remove leading ./
 	clinvar_vcf=$(find ./ -name "clinvar_*.vcf.gz" | sed s'/.\///')
@@ -90,9 +90,6 @@ main() {
 	find ~/in/vep_refs -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_refs
 	find ~/in/vep_annotation -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_annotation
 
-	# move annotation sources to home
-	mv ~/in/vep_annotation/* /home/dnanexus/
-
 	mark-section "filtering and splitting multiallelics"
 	# retain variants that are: # within ROIs (bed file),
 	#   have at least one allele >0.03 AF, and have DP >99
@@ -126,6 +123,9 @@ main() {
 	# place plugins into plugins folder
 	mkdir ~/Plugins
 	mv ~/in/vep_plugins/* ~/Plugins/
+
+	# move annotation sources to home
+	mv ~/in/vep_annotation/* /home/dnanexus/
 
 	# load vep docker
 	docker load -i "$vep_docker_path"
