@@ -36,14 +36,14 @@
 - Intermediate VCFs
 
 ## How does this app work?
-- Filters VCF with bedtools:
+- Filters mutect2 VCF with bedtools:
     - retain variants within ROI
-- Filters VCF with bcftools:
+- Filters mutect2 VCF with bcftools:
     - retain positions where at least one variant has AF > 0.03
     - retain positions where DP >99
     - split multiallelics using `--keep-sum AD` which changes the ref AD to be the sum of AD's
     - split multiallelics requires fixing AD and RPA number field in header from `.` to `R`
-- Annotates VCF with VEP:
+- Annotates mutect2 **and** pindel VCF with VEP:
     - Annotate against specified refseq transcripts with
         - gene symbol
         - variant class
@@ -58,10 +58,10 @@
         - ClinVar
         - CADD
         - previous counts
-- Filters VCF with VEP:
+- Filters **just** mutect2 VCF with VEP:
     - Retain variants with gnomAD AF < 0.1
     - Remove synonymous variants
-- Generates variant lists (one panel per sheet) in an excel workbook
+- Generates variant lists (one panel + pindel VCF per sheet) in an excel workbook
 - Generates BSVI-friendly VCF
 
 ## Limitations
