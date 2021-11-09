@@ -27,7 +27,14 @@
 - VCF output from sentieon mutect2 as part of Uranus workflow
 - BED file that details ROIs for myeloid NGS panel (default specified)
 - Genome FASTA and index that was used by to generate the VCF (default specified)
-- VEP tarball consisting of VEP docker, plugins and annotation sources (default specified)
+- VEP docker image (`vep_docker`, default specified)
+- VEP plugins (`vep_plugins`, default specified)
+- VEP reference files (`vep_refs`, default specified)
+- VEP annotation sources (`vep_annotation`, default specified)
+    - Cosmic Coding Variants (v94)
+    - Cosmic NonCoding Variants (v94)
+    - ClinVar (20211002)
+    - CADD (v1.6)
 - MAF file created from known set of samples (default specified)
 
 ## What does this app output?
