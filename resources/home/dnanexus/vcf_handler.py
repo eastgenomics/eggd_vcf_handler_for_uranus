@@ -55,6 +55,10 @@ def parse_args():
         '-v', '--vcfs', nargs='*',
         help='Panel filtered VCF(s) from which to generate excel workbook'
     )
+    parser.add_argument(
+        '-p', '--pindel',
+        help='Output VCF from cgppindel'
+    )
 
     args = parser.parse_args()
 
@@ -72,32 +76,28 @@ def read_vcf(input_vcf):
         - vcf_df (df): df of variants from vcf
         - vcf_header (list): header from vcf, for writing output (bsvi) vcf
     """
-    # read in vcf
-    process = subprocess.Popen(
-        f"cat {input_vcf} ", shell=True, stdout=subprocess.PIPE
-    )
-
-    vcf_data = io.StringIO()
+    # read in vcf to get header lines
+    with open(input_vcf, 'r') as fh:
+        vcf_data = fh.readlines()
 
     vcf_header = []
 
-    for line in process.stdout:
-        line = line.decode()
-        vcf_data.write(line)
-
+    for line in vcf_data:
         if line.startswith('#'):
             # dump out header to list to write back for output vcf
             vcf_header.append(line)
-
-    vcf_data.seek(0)
+        else:
+            break
 
     cols = [
         "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
         "FORMAT", "SAMPLE"
     ]
 
-    # read vcf into df
-    vcf_df = pd.read_csv(vcf_data, sep="\t", comment='#', names=cols)
+    # read vcf records into df
+    vcf_df = pd.read_csv(
+        input_vcf, sep="\t", comment='#', names=cols, compression='infer'
+    )
 
     return vcf_df, vcf_header
 
@@ -351,6 +351,10 @@ if __name__ == "__main__":
         panel_df, _ = read_vcf(vcf)  # don't retain vcf header as not needed
 
         vcfs_dict[panel] = panel_df
+
+    # read in pindel vcf and add to vcfs_dict to be included in excel
+    pindel_df, _ = read_vcf(Path(args.pindel))
+    vcfs_dict["pindel"] = pindel_df
 
     # modify genotype of bsvi vcf
     bsvi_vcf_df = all_genes_df.copy(deep=True)
