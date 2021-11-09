@@ -145,7 +145,8 @@ main() {
 	annotate_vep_vcf "$splitfile" "$splitvepfile"
 
 	# annotate pindel vcf with VEP
-	annotate_vep_vcf "$pindel_vcf_path" "${pindel_vcf_prefix}_vep.vcf"
+	pindelvepfile="${pindel_vcf_prefix}_vep.vcf"
+	annotate_vep_vcf "$pindel_vcf_path" "$pindelvepfile"
 
 
 	# filter mutect2 vcf with each set of panel transcripts
@@ -219,7 +220,7 @@ main() {
 	# note that order of VCFs passed to -v determines order of sheets in excel
 	time python3 vcf_handler.py -a "${allgenesvepfile}" \
 	-v "${myeloidvepfile}" "${cllvepfile}" "${tp53vepfile}" "${lglvepfile}" \
-	"${hclvepfile}" "${lplvepfile}" "${lymphoidvepfile}"
+	"${hclvepfile}" "${lplvepfile}" "${lymphoidvepfile}" -p "$pindelvepfile"
 
 	mark-section "uploading output"
 
