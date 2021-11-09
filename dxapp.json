@@ -3,11 +3,11 @@
   "title": "eggd_vcf_handler_for_uranus",
   "summary": "Annotates and filters VCF files for Uranus",
   "properties": {
-    "githubRelease": "2.2.0"
+    "githubRelease": "2.3.0"
   },
   "dxapi": "1.0.0",
   "openSource": true,
-  "version": "2.2.0",
+  "version": "2.3.0",
   "inputSpec": [
     {
       "name": "mutect2_vcf",
@@ -205,6 +205,12 @@
     }
   ],
   "outputSpec": [
+    {
+      "name": "pindel_vep_vcf",
+      "label": "Annotated cgppindel VCF",
+      "help": "VCF that has been previously filtered and now annotated with VEP",
+      "class": "file"
+    },
     {
       "name": "allgenes_filtered_vcf",
       "label": "Filtered and annotated VCF for all panel genes",
