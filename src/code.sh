@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Performs annotation and filtering of given VCF to produce multiple annotated VCFs
+# Performs annotation and filtering of given mutect2 VCF to produce multiple annotated VCFs
+# Performs annotation of given pindel VCF to produce annotated VCF
 # Generates an excel workbook to aid variant interpretation
 # Also generates a workaround for BSVI mis-handling multiallelics
 
@@ -96,7 +97,7 @@ main() {
 	# note that --keep-sum AD is a one way conversion in bcftools 1.12.0 and can't
 	#   be undone with bcftools norm -m +any
 	# bedtools and bcftools are app assets
-	splitfile="${mutect2_vcf_prefix}_split.vcf"
+	splitfile="${mutect2_mutect2_vcf_prefix}_split.vcf"
 
 	time bedtools intersect -header -a "${mutect2_vcf_path}" -b "${bed_path}" \
 	| bcftools view -i "FORMAT/AF[*]>0.03" - \
@@ -141,18 +142,19 @@ main() {
 
 	# annotate full mutect2 VCF with VEP
 	# outputs to $splitvepfile that is then filtered by transcript lists
-	splitvepfile="${mutect2_vcf_prefix}_split_filevep.vcf"
+	splitvepfile="${mutect2_mutect2_vcf_prefix}_split_filevep.vcf"
 	annotate_vep_vcf "$splitfile" "$splitvepfile"
 
 	# annotate pindel vcf with VEP
-	pindelvepfile="${pindel_vcf_prefix}_vep.vcf"
-	annotate_vep_vcf "$pindel_vcf_path" "$pindelvepfile"
+	mv "$pindel_vcf_path" /home/dnanexus
+	pindelvepfile="${pindel_mutect2_vcf_prefix}_vep.vcf"
+	annotate_vep_vcf "$pindel_vcf_name" "$pindelvepfile"
 
 
 	# filter mutect2 vcf with each set of panel transcripts
 
 	# filter with VEP for all gene transcripts
-	allgenesvepfile="${vcf_prefix}_allgenesvep.vcf"
+	allgenesvepfile="${mutect2_vcf_prefix}_allgenesvep.vcf"
 
 	filter_vep_vcf "$splitvepfile" "$allgenesvepfile" "$all_genes_transcripts"
 
@@ -161,7 +163,7 @@ main() {
 	lymphoid_transcripts="NM_000051.,NM_001165.,NM_004333.,NM_004380.,NM_001429.,NM_004456.,\
 	NM_033632.,NM_005343.,NM_033360.,NM_002468.,NM_017617.,NM_002524.,NM_016734.,NM_012433.,\
 	NM_139276.,NM_012448.,NM_000546."
-	lymphoidvepfile="${vcf_prefix}_pan-lymphoidvep.vcf"
+	lymphoidvepfile="${mutect2_vcf_prefix}_pan-lymphoidvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$lymphoidvepfile" "$lymphoid_transcripts"
 
@@ -173,7 +175,7 @@ main() {
 	NM_001136023.,NM_017617.,NM_002520.,NM_002524.,NM_016734.,NM_001015877.,NM_003620.,NM_000314.,\
 	NM_002834.,NM_006265.,NM_001754.,NM_015559.,NM_012433.,NM_005475.,NM_001195427.,NM_001042750.,\
 	NM_139276.,NM_012448.,NM_001127208.,NM_000546.,NM_006758.,NM_024426.,NM_005089."
-	myeloidvepfile="${vcf_prefix}_myeloidvep.vcf"
+	myeloidvepfile="${mutect2_vcf_prefix}_myeloidvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$myeloidvepfile" "$myeloid_transcripts"
 
@@ -181,32 +183,32 @@ main() {
 	# filter with VEP for CLL_Extended genes list
 	cll_transcripts="NM_001165.,NM_004333.,NM_033632.,NM_005343.,NM_033360.,NM_002468.,NM_017617.,\
 	NM_002524.,NM_012433.,NM_000546.,NM_000051."
-	cllvepfile="${vcf_prefix}_CLL-extendedvep.vcf"
+	cllvepfile="${mutect2_vcf_prefix}_CLL-extendedvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$cllvepfile" "$cll_transcripts"
 
 
 	# filter with VEP for TP53
-	tp53vepfile="${vcf_prefix}_TP53vep.vcf"
+	tp53vepfile="${mutect2_vcf_prefix}_TP53vep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$tp53vepfile" "NM_000546."
 
 
 	# filter with VEP for LGL
 	lgl_transcripts="NM_139276.,NM_012448."
-	lglvepfile="${vcf_prefix}_LGLvep.vcf"
+	lglvepfile="${mutect2_vcf_prefix}_LGLvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$lglvepfile" "$lgl_transcripts"
 
 
 	# run vep for HCL
-	hclvepfile="${vcf_prefix}_HCLvep.vcf"
+	hclvepfile="${mutect2_vcf_prefix}_HCLvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$hclvepfile" "NM_004333."
 
 
 	# run vep for LPL
-	lplvepfile=${vcf_prefix}_LPLvep.vcf
+	lplvepfile=${mutect2_vcf_prefix}_LPLvep.vcf
 
 	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468."
 
@@ -229,10 +231,11 @@ main() {
 		~/out/cll_filtered_vcf ~/out/tp53_filtered_vcf ~/out/lgl_filtered_vcf ~/out/hcl_filtered_vcf\
 		~/out/lpl_filtered_vcf ~/out/bsvi_vcf ~/out/text_report ~/out/excel_report
 
-	bsvivcf="${vcf_prefix}_allgenes_bsvi.vcf"
-	variantlist="${vcf_prefix}_allgenes.tsv"
-	excellist="${vcf_prefix}_panels.xlsx"
+	bsvivcf="${mutect2_vcf_prefix}_allgenes_bsvi.vcf"
+	variantlist="${mutect2_vcf_prefix}_allgenes.tsv"
+	excellist="${mutect2_vcf_prefix}_panels.xlsx"
 
+	mv ~/"${pindelvepfile}" ~/out/pindel_vep_vcf/
 	mv ~/"${allgenesvepfile}" ~/out/allgenes_filtered_vcf/
 	mv ~/"${lymphoidvepfile}" ~/out/lymphoid_filtered_vcf/
 	mv ~/"${myeloidvepfile}" ~/out/myeloid_filtered_vcf/
