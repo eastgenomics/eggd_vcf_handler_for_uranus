@@ -96,9 +96,9 @@ main() {
 	# note that --keep-sum AD is a one way conversion in bcftools 1.12.0 and can't
 	#   be undone with bcftools norm -m +any
 	# bedtools and bcftools are app assets
-	splitfile="${vcf_prefix}_split.vcf"
+	splitfile="${mutect2_vcf_prefix}_split.vcf"
 
-	time bedtools intersect -header -a "${vcf_path}" -b "${bed_path}" \
+	time bedtools intersect -header -a "${mutect2_vcf_path}" -b "${bed_path}" \
 	| bcftools view -i "FORMAT/AF[*]>0.03" - \
 	| bcftools view -i "DP>99" - \
 	| sed 's/AD,Number=./AD,Number=R/g' \
@@ -139,11 +139,16 @@ main() {
 	NM_001754.,NM_006758.,NM_007194.,NM_001429.,NM_005089.,NM_001123385.,NM_002049.,NM_001042750.,\
 	NM_001184772.,NM_001015877."
 
-	# annotate full VCF with VEP
+	# annotate full mutect2 VCF with VEP
 	# outputs to $splitvepfile that is then filtered by transcript lists
-	splitvepfile="${vcf_prefix}_split_filevep.vcf"
+	splitvepfile="${mutect2_vcf_prefix}_split_filevep.vcf"
 	annotate_vep_vcf "$splitfile" "$splitvepfile"
 
+	# annotate pindel vcf with VEP
+	annotate_vep_vcf "$pindel_vcf_path" "${pindel_vcf_prefix}_vep.vcf"
+
+
+	# filter mutect2 vcf with each set of panel transcripts
 
 	# filter with VEP for all gene transcripts
 	allgenesvepfile="${vcf_prefix}_allgenesvep.vcf"

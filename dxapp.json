@@ -10,9 +10,17 @@
   "version": "2.2.0",
   "inputSpec": [
     {
-      "name": "vcf",
-      "label": "gzipped vcf",
+      "name": "mutect2_vcf",
+      "label": "gzipped mutect2 vcf",
       "help": "mutect2 vcf",
+      "class": "file",
+      "patterns": ["*.vcf.gz"],
+      "optional": false
+    },
+    {
+      "name": "pindel_vcf",
+      "label": "gzipped pindel vcf",
+      "help": "pindel vcf",
       "class": "file",
       "patterns": ["*.vcf.gz"],
       "optional": false
