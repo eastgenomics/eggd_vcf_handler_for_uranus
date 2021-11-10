@@ -26,8 +26,8 @@
       "optional": false
     },
     {
-      "name": "bed",
-      "label": "bed file used to define regions of interest",
+      "name": "mutect2_bed",
+      "label": "bed file used to define regions of interest of mutect2 output vcf",
       "help": "The bed file will be used to remove variants outside the regions of interest",
       "class": "file",
       "patterns": ["coding_unrestricted*.bed"],
@@ -39,6 +39,23 @@
           "path": "/bed_files/b38/kits/myeloid"
         }
       ],
+      "optional": false
+    },
+    {
+      "name": "pindel_bed",
+      "label": "pindel regions bed file",
+      "help": "The bed file will be used to remove variants outside the regions of interest",
+      "class": "file",
+      "suggestions": [
+        {
+          "name": "001_Reference",
+          "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+          "path": "/bed_files/b38/kits/myeloid"
+        }
+      ],
+      "default": {
+        "$dnanexus_link": "file-G0bFvXQ433GZJq780QgxZxKf"
+      },
       "optional": false
     },
     {

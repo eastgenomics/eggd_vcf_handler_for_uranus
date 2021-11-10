@@ -88,8 +88,8 @@ main() {
 	# move annotation sources to home
 	mv ~/in/vep_annotation/* /home/dnanexus/
 
-	mark-section "filtering and splitting multiallelics"
-	# retain variants that are: # within ROIs (bed file),
+	mark-section "filtering mutect2 VCF"
+	# retain variants that are: # within ROIs (mutect2_bed file),
 	#   have at least one allele >0.03 AF, and have DP >99
 	# fix AD and RPA number in header
 	# split multiallelics using --keep-sum AD which changes the ref AD to be a sum
@@ -99,13 +99,22 @@ main() {
 	# bedtools and bcftools are app assets
 	splitfile="${mutect2_vcf_prefix}_split.vcf"
 
-	time bedtools intersect -header -a "${mutect2_vcf_path}" -b "${bed_path}" \
+	time bedtools intersect -header -a "${mutect2_vcf_path}" -b "${mutect2_bed_path}" \
 	| bcftools view -i "FORMAT/AF[*]>0.03" - \
 	| bcftools view -i "DP>99" - \
 	| sed 's/AD,Number=./AD,Number=R/g' \
 	| sed 's/RPA,Number=./RPA,Number=R/g' \
 	| bcftools norm -f "${mutect2_fasta_path}" -m -any --keep-sum AD - \
 	-o ~/"${splitfile}"
+
+	mark-section "filtering pindel VCF"
+
+    # Keep only indels that intersect with the exons of interest bed file 
+	bedtools view -R $pindel_bed_path $pindel_vcf_path > "${pindel_vcf_prefix}.tmp.vcf"
+
+    # Keep only insertions with length greater than 2. This will remove the 1 bp false positive insertions
+	pindel_filtered_vcf="${pindel_vcf_prefix}.filtered.vcf"
+	bcftools view -i 'INFO/LEN > 2' "${pindel_vcf_prefix}.tmp.vcf" > $pindel_filtered_vcf
 
 	mark-section "annotating and further filtering"
 	
@@ -208,16 +217,14 @@ main() {
 	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468."
 
 	# annotate pindel vcf with VEP
-	mv "$pindel_vcf_path" /home/dnanexus
-	pindelannotated="${pindel_vcf_prefix}_annotated.vcf"
-	
-	annotate_vep_vcf "$pindel_vcf_name" "$pindelannotated"
+	pindel_annotated="${pindel_vcf_prefix}_annotated.vcf"
+	annotate_vep_vcf "$pindel_filtered_vcf" "$pindel_annotated"
 
 	# filter pindel vcf by transcripts
 	pindel_transcripts="NM_004119.,NM_004343.,NM_004364."
 	pindelvepfile="${pindel_vcf_prefix}_vep.vcf"
 
-	filter_vep_vcf "$pindelannotated" "$pindelvepfile" "$pindel_transcripts"
+	filter_vep_vcf "$pindel_annotated" "$pindelvepfile" "$pindel_transcripts"
 
 	mark-section "BSVI workaround (overwriting GT) and creating variant list"
 
