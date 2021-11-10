@@ -97,7 +97,7 @@ main() {
 	# note that --keep-sum AD is a one way conversion in bcftools 1.12.0 and can't
 	#   be undone with bcftools norm -m +any
 	# bedtools and bcftools are app assets
-	splitfile="${mutect2_mutect2_vcf_prefix}_split.vcf"
+	splitfile="${mutect2_vcf_prefix}_split.vcf"
 
 	time bedtools intersect -header -a "${mutect2_vcf_path}" -b "${bed_path}" \
 	| bcftools view -i "FORMAT/AF[*]>0.03" - \
@@ -142,13 +142,8 @@ main() {
 
 	# annotate full mutect2 VCF with VEP
 	# outputs to $splitvepfile that is then filtered by transcript lists
-	splitvepfile="${mutect2_mutect2_vcf_prefix}_split_filevep.vcf"
+	splitvepfile="${mutect2_vcf_prefix}_split_filevep.vcf"
 	annotate_vep_vcf "$splitfile" "$splitvepfile"
-
-	# annotate pindel vcf with VEP
-	mv "$pindel_vcf_path" /home/dnanexus
-	pindelvepfile="${pindel_mutect2_vcf_prefix}_vep.vcf"
-	annotate_vep_vcf "$pindel_vcf_name" "$pindelvepfile"
 
 
 	# filter mutect2 vcf with each set of panel transcripts
@@ -212,6 +207,17 @@ main() {
 
 	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468."
 
+	# annotate pindel vcf with VEP
+	mv "$pindel_vcf_path" /home/dnanexus
+	pindelannotated="${pindel_vcf_prefix}_annotated.vcf"
+	
+	annotate_vep_vcf "$pindel_vcf_name" "$pindelannotated"
+
+	# filter pindel vcf by transcripts
+	pindel_transcripts="NM_004119.,NM_004343.,NM_004364."
+	pindelvepfile="${pindel_vcf_prefix}_vep.vcf"
+
+	filter_vep_vcf "$pindelannotated" "$pindelvepfile" "$pindel_transcripts"
 
 	mark-section "BSVI workaround (overwriting GT) and creating variant list"
 
@@ -229,7 +235,7 @@ main() {
 	# make required output directories and move files
 	mkdir -p ~/out/allgenes_filtered_vcf ~/out/lymphoid_filtered_vcf/ ~/out/myeloid_filtered_vcf/\
 		~/out/cll_filtered_vcf ~/out/tp53_filtered_vcf ~/out/lgl_filtered_vcf ~/out/hcl_filtered_vcf\
-		~/out/lpl_filtered_vcf ~/out/bsvi_vcf ~/out/text_report ~/out/excel_report
+		~/out/lpl_filtered_vcf ~/out/bsvi_vcf ~/out/text_report ~/out/excel_report ~/out/pindel_vep_vcf
 
 	bsvivcf="${mutect2_vcf_prefix}_allgenes_bsvi.vcf"
 	variantlist="${mutect2_vcf_prefix}_allgenes.tsv"

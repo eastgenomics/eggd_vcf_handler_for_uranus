@@ -89,10 +89,17 @@ def read_vcf(input_vcf):
         else:
             break
 
-    cols = [
-        "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
-        "FORMAT", "SAMPLE"
-    ]
+    if "TUMOUR" in vcf_header[-1]:
+        # pindel vcf has NORMAL & TUMOUR instead of SAMPLE
+        cols = [
+            "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
+            "FORMAT", "NORMAL", "TUMOUR"
+        ]
+    else:
+        cols = [
+            "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
+            "FORMAT", "SAMPLE"
+        ]
 
     # read vcf records into df
     vcf_df = pd.read_csv(
@@ -131,6 +138,33 @@ def mod_genotype(vcf_df):
             vcf_df.at[index, 'SAMPLE'] = sample
 
     return vcf_df
+
+
+def get_field_index(column, field):
+    """
+    Returns the index of a given field in a column with values separated by ':'
+
+    Args:
+        - column (pd.Series): df column to get field index
+        - field (str): field to get index of
+
+    Returns: index of given field
+    """
+    return column.apply(lambda x: x.split(':').index(field)).to_list()[0]
+
+
+def get_field_value(column, index):
+    """
+    Given a column with ':' separated values and index, return a
+    series of values with the value split by the index
+
+    Args:
+        - column (pd.Series): column to split and return from
+        - index (int): index to select
+
+    Returns: series of values selected by index
+    """
+    return column.apply(lambda x: int(x.split(':')[index]))
 
 
 def df_report_formatting(fname, vcf_df):
@@ -178,22 +212,57 @@ def df_report_formatting(fname, vcf_df):
     # calc Prev_count
     vcf_df['Prev_Count'] = vcf_df['Prev_AC'] + '/' + vcf_df['Prev_NS']
 
-    # get index of AF in format column, should all be same and have a
-    # list with 1 value, used to get AF from the sample column
-    af_index = list(set(
-        vcf_df['FORMAT'].apply(lambda x: x.split(':').index('AF')).to_list()
-    ))
+    if "TUMOUR" in vcf_df.columns:
+        # handle pindel vcf, AF to be calculated from TUMOUR field
+        # this is calculated as (PU + NU) / (PR + NR)
+        # values are described in table 15.7.3 here:
+        # # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6097606/ 
+        caller = "Pindel"
 
-    # sense check all AF at same index
-    assert len(af_index) == 1, \
-        'Error in FORMAT column, AF not all at same index.'
+        # get indices of required fields
+        pu_index = get_field_index(vcf_df['FORMAT'], 'PU')
+        nu_index = get_field_index(vcf_df['FORMAT'], 'NU')
+        pr_index = get_field_index(vcf_df['FORMAT'], 'PR')
+        nr_index = get_field_index(vcf_df['FORMAT'], 'NR')
 
-    # get AF values from sample column add to new AF column, convert to %
-    af_index = af_index[0]
-    af_values = vcf_df['SAMPLE'].apply(lambda x: x.split(':')[af_index]).apply(
-        lambda x: format(float(x) * 100)).apply(
-        lambda x: '{:.1f}'.format(float(x)))
-    vcf_df.insert(16, 'Mutect2_AF%', af_values)
+        # get values for given field from TUMOUR column
+        pu_values = get_field_value(vcf_df['TUMOUR'], pu_index)
+        nu_values = get_field_value(vcf_df['TUMOUR'], nu_index)
+        pr_values = get_field_value(vcf_df['TUMOUR'], pr_index)
+        nr_values = get_field_value(vcf_df['TUMOUR'], nr_index)
+
+        # calculate af
+        af_values = (pu_values + nu_values) / (pr_values + nr_values)
+
+        # format as pct to 1dp
+        af_pcts = af_values.apply(lambda x: '{:.1f}'.format(float(x * 100)))
+
+        vcf_df.insert(16, 'Pindel_AF%', af_pcts)
+    else:
+        # mutect2 vcf
+        caller = "Mutect2"
+
+        # get index of AF in format column, should all be same and have a
+        # list with 1 value, used to get AF from the sample column
+        af_index = list(set(
+            vcf_df['FORMAT'].apply(lambda x: x.split(':').index('AF')).to_list()
+        ))
+
+        # sense check all AF at same index
+        assert len(af_index) == 1, \
+            'Error in FORMAT column, AF not all at same index.'
+
+        # get AF values from sample column add to new AF column, convert to %
+        af_index = af_index[0]
+        af_values = vcf_df["SAMPLE"].apply(
+            lambda x: x.split(':')[af_index]
+        ).apply(
+            lambda x: format(float(x) * 100)
+        ).apply(
+            lambda x: '{:.1f}'.format(float(x))
+        )
+    
+        vcf_df.insert(16, 'Mutect2_AF%', af_values)
 
     # split messy DB annotation column out to clinvar, cosmic & dbsnp
     # cols have multiple fields and diff delimeters then join with ','
@@ -238,7 +307,9 @@ def df_report_formatting(fname, vcf_df):
             f"HGVSp: {x['HGVSp'] if x['HGVSp'] else 'None'} \n"
             f"COSMIC ID: {x['COSMIC'] if x['COSMIC'] else 'None'} \n"
             f"dbSNP: {x['dbSNP'] if x['dbSNP'] else 'None'} \n"
-            f"Allele Frequency (VAF): {x['Mutect2_AF%'] + '%' if x['Mutect2_AF%']else 'None'}"
+            f"""Allele Frequency (VAF): {
+                str(x[f'{caller}_AF%']) + '%' if x[f'{caller}_AF%'] else 'None'
+            }"""
         ), axis=1
     )
 
@@ -252,9 +323,9 @@ def df_report_formatting(fname, vcf_df):
     # select and re-order df columns
     vcf_df = vcf_df[[
         'samplename', 'CHROM', 'POS', 'GENE', 'Transcript_ID', 'EXON', 'HGVSc',
-        'HGVSp', 'Protein_ID', 'CONSEQ', 'Read_Depth', 'Mutect2_AF%', 'FILTER',
-        'ClinVar', 'ClinVar_CLNSIG', 'ClinVar_CLNDN', 'COSMIC', 'dbSNP',
-        'gnomAD_AF', 'CADD_PHRED', 'Prev_Count', 'Report_text'
+        'HGVSp', 'Protein_ID', 'CONSEQ', 'Read_Depth', f'{caller}_AF%',
+        'FILTER', 'ClinVar', 'ClinVar_CLNSIG', 'ClinVar_CLNDN', 'COSMIC',
+        'dbSNP', 'gnomAD_AF', 'CADD_PHRED', 'Prev_Count', 'Report_text'
     ]]
 
     return vcf_df
