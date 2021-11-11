@@ -1,7 +1,9 @@
 #!/bin/bash
 #
 # Performs annotation and filtering of given mutect2 VCF to produce multiple annotated VCFs
-# Performs annotation of given pindel VCF to produce annotated VCF
+# Performs filtering and annotation of given pindel VCF to produce annotated VCF
+# n.b. filtering for pindel is a combination of a bed files of regions, removal of all 1-2bp
+# insetions and filtering by transcript with vep
 # Generates an excel workbook to aid variant interpretation
 # Also generates a workaround for BSVI mis-handling multiallelics
 
@@ -110,7 +112,7 @@ main() {
 	mark-section "filtering pindel VCF"
 
     # Keep only indels that intersect with the exons of interest bed file 
-	bedtools view -R $pindel_bed_path $pindel_vcf_path > "${pindel_vcf_prefix}.tmp.vcf"
+	bcftools view -R $pindel_bed_path $pindel_vcf_path > "${pindel_vcf_prefix}.tmp.vcf"
 
     # Keep only insertions with length greater than 2. This will remove the 1 bp false positive insertions
 	pindel_filtered_vcf="${pindel_vcf_prefix}.filtered.vcf"

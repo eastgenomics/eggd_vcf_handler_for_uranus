@@ -26,6 +26,14 @@
       "optional": false
     },
     {
+      "name": "pindel_vcf_idx",
+      "label": "index of pindel vcf",
+      "help": "pindel vcf index",
+      "class": "file",
+      "patterns": ["*.vcf.gz.tbi"],
+      "optional": false
+    },
+    {
       "name": "mutect2_bed",
       "label": "bed file used to define regions of interest of mutect2 output vcf",
       "help": "The bed file will be used to remove variants outside the regions of interest",
