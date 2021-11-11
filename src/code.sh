@@ -2,7 +2,7 @@
 #
 # Performs annotation and filtering of given mutect2 VCF to produce multiple annotated VCFs
 # Performs filtering and annotation of given pindel VCF to produce annotated VCF
-# n.b. filtering for pindel is a combination of a bed files of regions, removal of all 1-2bp
+# n.b. filtering for pindel is a combination of a bed file of regions, removal of all 1-2bp
 # insetions and filtering by transcript with vep
 # Generates an excel workbook to aid variant interpretation
 # Also generates a workaround for BSVI mis-handling multiallelics
@@ -86,6 +86,7 @@ main() {
 	find ~/in/vep_plugins -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_plugins
 	find ~/in/vep_refs -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_refs
 	find ~/in/vep_annotation -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_annotation
+	# find ~/in/pindel_vcf -type f -name "*" | xargs -0 -I {} mv {} ~/in/pindel_vcf
 
 	# move annotation sources to home
 	mv ~/in/vep_annotation/* /home/dnanexus/
@@ -110,13 +111,18 @@ main() {
 	-o ~/"${splitfile}"
 
 	mark-section "filtering pindel VCF"
+	# Filtering of pindel vcf for:
+    # - only indels that intersect with the exons of interest bed file 
+    # - only insertions with length greater than 2. This will remove the 1 bp false positive insertions
 
-    # Keep only indels that intersect with the exons of interest bed file 
-	bcftools view -R $pindel_bed_path $pindel_vcf_path > "${pindel_vcf_prefix}.tmp.vcf"
+	mv /home/dnanexus/in/pindel_vcf/* /home/dnanexus
+	mv /home/dnanexus/in/pindel_vcf_idx/* /home/dnanexus
 
-    # Keep only insertions with length greater than 2. This will remove the 1 bp false positive insertions
+	bcftools view -R $pindel_bed_path $pindel_vcf_name > "${pindel_vcf_prefix}.tmp.vcf"
+
 	pindel_filtered_vcf="${pindel_vcf_prefix}.filtered.vcf"
 	bcftools view -i 'INFO/LEN > 2' "${pindel_vcf_prefix}.tmp.vcf" > $pindel_filtered_vcf
+
 
 	mark-section "annotating and further filtering"
 	
