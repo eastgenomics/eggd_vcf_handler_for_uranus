@@ -77,7 +77,7 @@ function filter_vep_vcf {
 	-o /opt/vep/.vep/"$output_vcf" --only_matched --filter \
 	"(gnomAD_AF < 0.10 or not gnomAD_AF) and $transcript_list"
 }
-
+test
 main() {
 	set -e -x -v -o pipefail
 
