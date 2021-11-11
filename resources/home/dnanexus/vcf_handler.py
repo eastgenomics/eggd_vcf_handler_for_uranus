@@ -197,7 +197,7 @@ def df_report_formatting(fname, vcf_df):
     info_cols = [
         'GENE', 'VARIANT_CLASS', 'CONSEQ', 'EXON', 'HGVSc', 'HGVSp',
         'gnomAD_AF', 'CADD_PHRED', 'DB', 'ClinVar', 'ClinVar_CLNDN',
-        'ClinVar_CLNSIG', 'Prev_AC', 'Prev_NS', 'Feature'
+        'ClinVar_CLNSIG', 'COSMIC', 'Prev_AC', 'Prev_NS', 'Feature'
     ]
 
     # splits info column to cols defined in info_cols
@@ -264,12 +264,12 @@ def df_report_formatting(fname, vcf_df):
     
         vcf_df.insert(16, 'Mutect2_AF%', af_values)
 
-    # split messy DB annotation column out to clinvar, cosmic & dbsnp
-    # cols have multiple fields and diff delimeters then join with ','
-    # in case of having more than one entry
-    vcf_df['COSMIC'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
-        lambda x: ','.join((y for y in x if y.startswith('COS')))
+    # cosmic annotation returns duplicates for each record in cosmic vcf
+    # turn to set to be unique, join in case there is more than one
+    vcf_df['COSMIC'] = vcf_df['COSMIC'].apply(
+        lambda x: (','.join(set(x.split('&')))) if x else x
     )
+
     # waiting to hear if the haemonc team want hgmd or not
     # vcf_df['HGMD'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
     #     lambda x: ','.join((y for y in x if y.startswith('CM', 'CD')))

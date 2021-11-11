@@ -19,10 +19,14 @@ function annotate_vep_vcf {
 	
 	# fields to filter on
 	# hard coded in function for now, can be made an input but all are the same
-	filter_fields="SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,Prev_AC,Prev_NS,Feature"
+	filter_fields="SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,COSMIC,Prev_AC,Prev_NS,Feature"
 
 	# find clinvar vcf, remove leading ./
 	clinvar_vcf=$(find ./ -name "clinvar_*.vcf.gz" | sed s'/.\///')
+
+	# find cosmic coding and non-coding vcfs
+	cosmic_coding=$(find ./ -name "CosmicCodingMuts*.vcf.gz" | sed s'/.\///')
+	cosmic_non_coding=$(find ./ -name "CosmicNonCodingVariants*.vcf.gz" | sed s'/.\///')
 
 	# find CADD files, remove leading ./
 	cadd_snv=$(find ./ -name "*SNVs.tsv.gz")
@@ -36,6 +40,8 @@ function annotate_vep_vcf {
 	--offline \
 	--custom /opt/vep/.vep/"${clinvar_vcf}",ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
 	--custom /opt/vep/.vep/"${maf_file_name}",Prev,vcf,exact,0,AC,NS \
+	--custom /opt/vep/.vep/"${cosmic_coding}",COSMIC,vcf,exact,0,ID \
+	--custom /opt/vep/.vep/"${cosmic_non_coding}",COSMIC,vcf,exact,0,ID \
 	--plugin CADD,/opt/vep/.vep/"${cadd_snv}",/opt/vep/.vep/"${cadd_indel}" \
 	--fields "$filter_fields" \
 	--no_stats
@@ -86,7 +92,6 @@ main() {
 	find ~/in/vep_plugins -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_plugins
 	find ~/in/vep_refs -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_refs
 	find ~/in/vep_annotation -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_annotation
-	# find ~/in/pindel_vcf -type f -name "*" | xargs -0 -I {} mv {} ~/in/pindel_vcf
 
 	# move annotation sources to home
 	mv ~/in/vep_annotation/* /home/dnanexus/
@@ -138,6 +143,9 @@ main() {
 	# place plugins into plugins folder
 	mkdir ~/Plugins
 	mv ~/in/vep_plugins/* ~/Plugins/
+
+	# move annotation sources to home
+	mv ~/in/vep_annotation/* /home/dnanexus/
 
 	# load vep docker
 	docker load -i "$vep_docker_path"
