@@ -1,7 +1,8 @@
 """
-Script takes mutect VCFs and:
-    1. Create vcf for import into BSVI
-    2. Create excel workbook with sheets for each panel
+Script takes mutect VCF and and cgppindel vcf to:
+    1. Filter and annotate both VCFs against defined transcripts
+    2. Create vcf for import into BSVI
+    3. Create excel workbook with sheets for each panel
 
 BSVI vcf requires multiallelic sites are decomposed and that all genotype
 fields are simplified to 0/1 (from, for example, 0/0/1/0).
@@ -13,8 +14,11 @@ Inputs are vcf files after VEP annotation and filtering:
     - *_allgenesvep.vcf (specified with -a argument)
     - *_[panel-name]vep.vcf (any number, specified with -v argument)
         e.g. *_lymphoidvep.vcf *_myeloidvep.vcf
+    - pindel vcf (specified with -p)
 
 Outputs:
+    - annotated and filtered mutect2 and pindel vcf
+    - annotated and filtered panel vcfs
     - bsvi vcf
     - tsv with variants
     - excel workbook with variants, one panel per sheet
@@ -170,7 +174,7 @@ def get_field_value(column, index):
 def df_report_formatting(fname, vcf_df):
     """
     Formats df of vcf records for report with INFO column split out to
-    individual columns. Expects min. 14 '|' separated fields in INFO
+    individual columns. Expects min. 15 '|' separated fields in INFO
     column to split out.
 
     Args:

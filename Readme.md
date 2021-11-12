@@ -75,7 +75,7 @@
 - Filters VCFs with VEP:
     - Retain variants with gnomAD AF < 0.1
     - Remove synonymous variants
-    - Filters by transcripts defined in `cpde.sh` for each panel
+    - Filters by transcripts defined in `code.sh` for each panel
 - Generates variant lists (one panel + pindel VCF per sheet) in an excel workbook
 - Generates BSVI-friendly VCF
 
