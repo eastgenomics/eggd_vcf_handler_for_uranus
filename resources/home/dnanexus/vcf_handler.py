@@ -220,7 +220,7 @@ def df_report_formatting(fname, vcf_df):
         # handle pindel vcf, AF to be calculated from TUMOUR field
         # this is calculated as (PU + NU) / (PR + NR)
         # values are described in table 15.7.3 here:
-        # # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6097606/ 
+        # # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6097606/
         caller = "Pindel"
 
         # get indices of required fields
@@ -248,8 +248,8 @@ def df_report_formatting(fname, vcf_df):
 
         # get index of AF in format column, should all be same and have a
         # list with 1 value, used to get AF from the sample column
-        af_index = list(set(
-            vcf_df['FORMAT'].apply(lambda x: x.split(':').index('AF')).to_list()
+        af_index = list(set(vcf_df['FORMAT'].apply(
+            lambda x: x.split(':').index('AF')).to_list()
         ))
 
         # sense check all AF at same index
@@ -265,7 +265,7 @@ def df_report_formatting(fname, vcf_df):
         ).apply(
             lambda x: '{:.1f}'.format(float(x))
         )
-    
+
         vcf_df.insert(16, 'Mutect2_AF%', af_values)
 
     # cosmic annotation returns duplicates for each record in cosmic vcf
