@@ -3,7 +3,7 @@
 ## What does this app do?
 ### This app uses bedtools, bcftools and VEP to take VCFs from sentieon mutect2 and pindel:
 - Annotates and filters sentieon mutect2 and pindel VCFs
-- Produces a excel workbook with sub-panels presented in separate sheets; also provides preformatted text to aid Epic data entry
+- Produces an excel workbook with sub-panels presented in separate sheets; also provides preformatted text to aid Epic data entry
 - Produces a VCF that can be used as input for BSVI, as BSVI can't handle mutect2's (VCFv4.2 compliant) representation of multiallelic variants in VCF
 
 ## What are typical use cases for this app?
@@ -18,7 +18,7 @@
 * VEP refseq (v103) annotation sources
 * CADD (v1.6) which now includes splicing
 * ClinVar VCF (20210501 release) modified to add chr prefix
-* merged VCF containing counts of each variant detected known set of samples (provided as separate input from tarball)
+* Merged VCF containing counts of each variant detected known set of samples (provided as separate input from tarball)
     
 
 ### This app has access to the Internet
@@ -54,7 +54,7 @@
     - retain positions where DP >99
     - split multiallelics using `--keep-sum AD` which changes the ref AD to be the sum of AD's
     - split multiallelics requires fixing AD and RPA number field in header from `.` to `R`
-- Filters cgppindel VCF with bedtools:
+- Filters cgppindel VCF with bcftools:
     - only indels that intersect with the exons of interest bed file 
     - only insertions with length greater than 2. This will remove the 1 bp false positive insertions.
 - Annotates mutect2 **and** cgppindel VCF with VEP:
