@@ -171,13 +171,14 @@ def get_field_value(column, index):
     return column.apply(lambda x: int(x.split(':')[index]))
 
 
-def df_report_formatting(fname, vcf_df):
+def df_report_formatting(panel, vcf_df):
     """
     Formats df of vcf records for report with INFO column split out to
     individual columns. Expects min. 15 '|' separated fields in INFO
     column to split out.
 
     Args:
+        - panel (str): panel name of vcf
         - vcf_df (df): df of variants from vcf
 
     Returns:
@@ -216,7 +217,7 @@ def df_report_formatting(fname, vcf_df):
     # calc Prev_count
     vcf_df['Prev_Count'] = vcf_df['Prev_AC'] + '/' + vcf_df['Prev_NS']
 
-    if "TUMOUR" in vcf_df.columns:
+    if panel == "pindel":
         # handle pindel vcf, AF to be calculated from TUMOUR field
         # this is calculated as (PU + NU) / (PR + NR)
         # values are described in table 15.7.3 here:
@@ -235,13 +236,15 @@ def df_report_formatting(fname, vcf_df):
         pr_values = get_field_value(vcf_df['TUMOUR'], pr_index)
         nr_values = get_field_value(vcf_df['TUMOUR'], nr_index)
 
-        # calculate af
+        # calculate af & format as pct to 1dp
         af_values = (pu_values + nu_values) / (pr_values + nr_values)
-
-        # format as pct to 1dp
         af_pcts = af_values.apply(lambda x: '{:.1f}'.format(float(x * 100)))
 
         vcf_df.insert(16, 'Pindel_AF%', af_pcts)
+
+        # depth is also not in the INFO field so will be blank for pindel,
+        # calulating this as PR + NR
+        vcf_df['Read_Depth'] = pr_values + nr_values
     else:
         # mutect2 vcf
         caller = "Mutect2"
@@ -444,7 +447,7 @@ if __name__ == "__main__":
     # apply formatting to each panel df for xlsx file
     for panel, vcf_df in vcfs_dict.items():
         if not vcf_df.empty:
-            vcf_df = df_report_formatting(fname, vcf_df)
+            vcf_df = df_report_formatting(panel, vcf_df)
             vcfs_dict[panel] = vcf_df
 
     write_bsvi_vcf(fname, bsvi_vcf_df, all_genes_df_header)
