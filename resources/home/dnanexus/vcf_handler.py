@@ -1,7 +1,8 @@
 """
-Script takes mutect VCFs and:
-    1. Create vcf for import into BSVI
-    2. Create excel workbook with sheets for each panel
+Script takes mutect VCF and and cgppindel vcf to:
+    1. Filter and annotate both VCFs against defined transcripts
+    2. Create vcf for import into BSVI
+    3. Create excel workbook with sheets for each panel
 
 BSVI vcf requires multiallelic sites are decomposed and that all genotype
 fields are simplified to 0/1 (from, for example, 0/0/1/0).
@@ -13,8 +14,11 @@ Inputs are vcf files after VEP annotation and filtering:
     - *_allgenesvep.vcf (specified with -a argument)
     - *_[panel-name]vep.vcf (any number, specified with -v argument)
         e.g. *_lymphoidvep.vcf *_myeloidvep.vcf
+    - pindel vcf (specified with -p)
 
 Outputs:
+    - annotated and filtered mutect2 and pindel vcf
+    - annotated and filtered panel vcfs
     - bsvi vcf
     - tsv with variants
     - excel workbook with variants, one panel per sheet
@@ -55,6 +59,10 @@ def parse_args():
         '-v', '--vcfs', nargs='*',
         help='Panel filtered VCF(s) from which to generate excel workbook'
     )
+    parser.add_argument(
+        '-p', '--pindel',
+        help='Output VCF from cgppindel'
+    )
 
     args = parser.parse_args()
 
@@ -72,32 +80,35 @@ def read_vcf(input_vcf):
         - vcf_df (df): df of variants from vcf
         - vcf_header (list): header from vcf, for writing output (bsvi) vcf
     """
-    # read in vcf
-    process = subprocess.Popen(
-        f"cat {input_vcf} ", shell=True, stdout=subprocess.PIPE
-    )
-
-    vcf_data = io.StringIO()
+    # read in vcf to get header lines
+    with open(input_vcf, 'r') as fh:
+        vcf_data = fh.readlines()
 
     vcf_header = []
 
-    for line in process.stdout:
-        line = line.decode()
-        vcf_data.write(line)
-
+    for line in vcf_data:
         if line.startswith('#'):
             # dump out header to list to write back for output vcf
             vcf_header.append(line)
+        else:
+            break
 
-    vcf_data.seek(0)
+    if "TUMOUR" in vcf_header[-1]:
+        # pindel vcf has NORMAL & TUMOUR instead of SAMPLE
+        cols = [
+            "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
+            "FORMAT", "NORMAL", "TUMOUR"
+        ]
+    else:
+        cols = [
+            "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
+            "FORMAT", "SAMPLE"
+        ]
 
-    cols = [
-        "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
-        "FORMAT", "SAMPLE"
-    ]
-
-    # read vcf into df
-    vcf_df = pd.read_csv(vcf_data, sep="\t", comment='#', names=cols)
+    # read vcf records into df
+    vcf_df = pd.read_csv(
+        input_vcf, sep="\t", comment='#', names=cols, compression='infer'
+    )
 
     return vcf_df, vcf_header
 
@@ -133,13 +144,41 @@ def mod_genotype(vcf_df):
     return vcf_df
 
 
-def df_report_formatting(fname, vcf_df):
+def get_field_index(column, field):
+    """
+    Returns the index of a given field in a column with values separated by ':'
+
+    Args:
+        - column (pd.Series): df column to get field index
+        - field (str): field to get index of
+
+    Returns: index of given field
+    """
+    return column.apply(lambda x: x.split(':').index(field)).to_list()[0]
+
+
+def get_field_value(column, index):
+    """
+    Given a column with ':' separated values and index, return a
+    series of values with the value split by the index
+
+    Args:
+        - column (pd.Series): column to split and return from
+        - index (int): index to select
+
+    Returns: series of values selected by index
+    """
+    return column.apply(lambda x: int(x.split(':')[index]))
+
+
+def df_report_formatting(panel, vcf_df):
     """
     Formats df of vcf records for report with INFO column split out to
-    individual columns. Expects min. 14 '|' separated fields in INFO
+    individual columns. Expects min. 15 '|' separated fields in INFO
     column to split out.
 
     Args:
+        - panel (str): panel name of vcf
         - vcf_df (df): df of variants from vcf
 
     Returns:
@@ -178,22 +217,59 @@ def df_report_formatting(fname, vcf_df):
     # calc Prev_count
     vcf_df['Prev_Count'] = vcf_df['Prev_AC'] + '/' + vcf_df['Prev_NS']
 
-    # get index of AF in format column, should all be same and have a
-    # list with 1 value, used to get AF from the sample column
-    af_index = list(set(
-        vcf_df['FORMAT'].apply(lambda x: x.split(':').index('AF')).to_list()
-    ))
+    if panel == "pindel":
+        # handle pindel vcf, AF to be calculated from TUMOUR field
+        # this is calculated as (PU + NU) / (PR + NR)
+        # values are described in table 15.7.3 here:
+        # # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6097606/
+        caller = "Pindel"
 
-    # sense check all AF at same index
-    assert len(af_index) == 1, \
-        'Error in FORMAT column, AF not all at same index.'
+        # get indices of required fields
+        pu_index = get_field_index(vcf_df['FORMAT'], 'PU')
+        nu_index = get_field_index(vcf_df['FORMAT'], 'NU')
+        pr_index = get_field_index(vcf_df['FORMAT'], 'PR')
+        nr_index = get_field_index(vcf_df['FORMAT'], 'NR')
 
-    # get AF values from sample column add to new AF column, convert to %
-    af_index = af_index[0]
-    af_values = vcf_df['SAMPLE'].apply(lambda x: x.split(':')[af_index]).apply(
-        lambda x: format(float(x) * 100)).apply(
-        lambda x: '{:.1f}'.format(float(x)))
-    vcf_df.insert(16, 'Mutect2_AF%', af_values)
+        # get values for given field from TUMOUR column
+        pu_values = get_field_value(vcf_df['TUMOUR'], pu_index)
+        nu_values = get_field_value(vcf_df['TUMOUR'], nu_index)
+        pr_values = get_field_value(vcf_df['TUMOUR'], pr_index)
+        nr_values = get_field_value(vcf_df['TUMOUR'], nr_index)
+
+        # calculate af & format as pct to 1dp
+        af_values = (pu_values + nu_values) / (pr_values + nr_values)
+        af_pcts = af_values.apply(lambda x: '{:.1f}'.format(float(x * 100)))
+
+        vcf_df.insert(16, 'Pindel_AF%', af_pcts)
+
+        # depth is also not in the INFO field so will be blank for pindel,
+        # calulating this as PR + NR
+        vcf_df['Read_Depth'] = pr_values + nr_values
+    else:
+        # mutect2 vcf
+        caller = "Mutect2"
+
+        # get index of AF in format column, should all be same and have a
+        # list with 1 value, used to get AF from the sample column
+        af_index = list(set(vcf_df['FORMAT'].apply(
+            lambda x: x.split(':').index('AF')).to_list()
+        ))
+
+        # sense check all AF at same index
+        assert len(af_index) == 1, \
+            'Error in FORMAT column, AF not all at same index.'
+
+        # get AF values from sample column add to new AF column, convert to %
+        af_index = af_index[0]
+        af_values = vcf_df["SAMPLE"].apply(
+            lambda x: x.split(':')[af_index]
+        ).apply(
+            lambda x: format(float(x) * 100)
+        ).apply(
+            lambda x: '{:.1f}'.format(float(x))
+        )
+
+        vcf_df.insert(16, 'Mutect2_AF%', af_values)
 
     # cosmic annotation returns duplicates for each record in cosmic vcf
     # turn to set to be unique, join in case there is more than one
@@ -238,7 +314,9 @@ def df_report_formatting(fname, vcf_df):
             f"HGVSp: {x['HGVSp'] if x['HGVSp'] else 'None'} \n"
             f"COSMIC ID: {x['COSMIC'] if x['COSMIC'] else 'None'} \n"
             f"dbSNP: {x['dbSNP'] if x['dbSNP'] else 'None'} \n"
-            f"Allele Frequency (VAF): {x['Mutect2_AF%'] + '%' if x['Mutect2_AF%']else 'None'}"
+            f"""Allele Frequency (VAF): {
+                str(x[f'{caller}_AF%']) + '%' if x[f'{caller}_AF%'] else 'None'
+            }"""
         ), axis=1
     )
 
@@ -252,9 +330,9 @@ def df_report_formatting(fname, vcf_df):
     # select and re-order df columns
     vcf_df = vcf_df[[
         'samplename', 'CHROM', 'POS', 'GENE', 'Transcript_ID', 'EXON', 'HGVSc',
-        'HGVSp', 'Protein_ID', 'CONSEQ', 'Read_Depth', 'Mutect2_AF%', 'FILTER',
-        'ClinVar', 'ClinVar_CLNSIG', 'ClinVar_CLNDN', 'COSMIC', 'dbSNP',
-        'gnomAD_AF', 'CADD_PHRED', 'Prev_Count', 'Report_text'
+        'HGVSp', 'Protein_ID', 'CONSEQ', 'Read_Depth', f'{caller}_AF%',
+        'FILTER', 'ClinVar', 'ClinVar_CLNSIG', 'ClinVar_CLNDN', 'COSMIC',
+        'dbSNP', 'gnomAD_AF', 'CADD_PHRED', 'Prev_Count', 'Report_text'
     ]]
 
     return vcf_df
@@ -352,6 +430,10 @@ if __name__ == "__main__":
 
         vcfs_dict[panel] = panel_df
 
+    # read in pindel vcf and add to vcfs_dict to be included in excel
+    pindel_df, _ = read_vcf(Path(args.pindel))
+    vcfs_dict["pindel"] = pindel_df
+
     # modify genotype of bsvi vcf
     bsvi_vcf_df = all_genes_df.copy(deep=True)
     bsvi_vcf_df = mod_genotype(bsvi_vcf_df)
@@ -365,7 +447,7 @@ if __name__ == "__main__":
     # apply formatting to each panel df for xlsx file
     for panel, vcf_df in vcfs_dict.items():
         if not vcf_df.empty:
-            vcf_df = df_report_formatting(fname, vcf_df)
+            vcf_df = df_report_formatting(panel, vcf_df)
             vcfs_dict[panel] = vcf_df
 
     write_bsvi_vcf(fname, bsvi_vcf_df, all_genes_df_header)
