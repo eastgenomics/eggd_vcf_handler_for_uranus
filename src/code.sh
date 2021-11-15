@@ -144,8 +144,6 @@ main() {
 	mkdir ~/Plugins
 	mv ~/in/vep_plugins/* ~/Plugins/
 
-	# move annotation sources to home
-	mv ~/in/vep_annotation/* /home/dnanexus/
 
 	# load vep docker
 	docker load -i "$vep_docker_path"
