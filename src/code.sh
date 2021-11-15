@@ -1,6 +1,9 @@
 #!/bin/bash
 #
-# Performs annotation and filtering of given VCF to produce multiple annotated VCFs
+# Performs annotation and filtering of given mutect2 VCF to produce multiple annotated VCFs
+# Performs filtering and annotation of given pindel VCF to produce annotated VCF
+# n.b. filtering for pindel is a combination of a bed file of regions, removal of all 1-2bp
+# insetions and filtering by transcript with vep
 # Generates an excel workbook to aid variant interpretation
 # Also generates a workaround for BSVI mis-handling multiallelics
 
@@ -16,10 +19,18 @@ function annotate_vep_vcf {
 	
 	# fields to filter on
 	# hard coded in function for now, can be made an input but all are the same
-	filter_fields="SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,Prev_AC,Prev_NS,Feature"
+	filter_fields="SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,COSMIC,Prev_AC,Prev_NS,Feature"
 
 	# find clinvar vcf, remove leading ./
 	clinvar_vcf=$(find ./ -name "clinvar_*.vcf.gz" | sed s'/.\///')
+
+	# find cosmic coding and non-coding vcfs
+	cosmic_coding=$(find ./ -name "CosmicCodingMuts*.vcf.gz" | sed s'/.\///')
+	cosmic_non_coding=$(find ./ -name "CosmicNonCodingVariants*.vcf.gz" | sed s'/.\///')
+
+	# find CADD files, remove leading ./
+	cadd_snv=$(find ./ -name "*SNVs.tsv.gz")
+	cadd_indel=$(find ./ -name "*indel.tsv.gz")
 
 	time docker run -v /home/dnanexus:/opt/vep/.vep \
 	ensemblorg/ensembl-vep:release_103.1 \
@@ -29,7 +40,9 @@ function annotate_vep_vcf {
 	--offline \
 	--custom /opt/vep/.vep/"${clinvar_vcf}",ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN \
 	--custom /opt/vep/.vep/"${maf_file_name}",Prev,vcf,exact,0,AC,NS \
-	--plugin CADD,/opt/vep/.vep/whole_genome_SNVs.tsv.gz,/opt/vep/.vep/gnomad.genomes.r3.0.indel.tsv.gz \
+	--custom /opt/vep/.vep/"${cosmic_coding}",COSMIC,vcf,exact,0,ID \
+	--custom /opt/vep/.vep/"${cosmic_non_coding}",COSMIC,vcf,exact,0,ID \
+	--plugin CADD,/opt/vep/.vep/"${cadd_snv}",/opt/vep/.vep/"${cadd_indel}" \
 	--fields "$filter_fields" \
 	--no_stats
 }
@@ -75,8 +88,16 @@ main() {
 	mv "${maf_file_path}" /home/dnanexus/
 	mv "${maf_file_tbi_path}" /home/dnanexus/
 
-	mark-section "filtering and splitting multiallelics"
-	# retain variants that are: # within ROIs (bed file),
+	# array inputs end up in subdirectories (i.e. ~/in/array-input/0/), flatten to parent dir
+	find ~/in/vep_plugins -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_plugins
+	find ~/in/vep_refs -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_refs
+	find ~/in/vep_annotation -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_annotation
+
+	# move annotation sources to home
+	mv ~/in/vep_annotation/* /home/dnanexus/
+
+	mark-section "filtering mutect2 VCF"
+	# retain variants that are: # within ROIs (mutect2_bed file),
 	#   have at least one allele >0.03 AF, and have DP >99
 	# fix AD and RPA number in header
 	# split multiallelics using --keep-sum AD which changes the ref AD to be a sum
@@ -84,9 +105,9 @@ main() {
 	# note that --keep-sum AD is a one way conversion in bcftools 1.12.0 and can't
 	#   be undone with bcftools norm -m +any
 	# bedtools and bcftools are app assets
-	splitfile="${vcf_prefix}_split.vcf"
+	splitfile="${mutect2_vcf_prefix}_split.vcf"
 
-	time bedtools intersect -header -a "${vcf_path}" -b "${bed_path}" \
+	time bedtools intersect -header -a "${mutect2_vcf_path}" -b "${mutect2_bed_path}" \
 	| bcftools view -i "FORMAT/AF[*]>0.03" - \
 	| bcftools view -i "DP>99" - \
 	| sed 's/AD,Number=./AD,Number=R/g' \
@@ -94,30 +115,38 @@ main() {
 	| bcftools norm -f "${mutect2_fasta_path}" -m -any --keep-sum AD - \
 	-o ~/"${splitfile}"
 
+	mark-section "filtering pindel VCF"
+	# Filtering of pindel vcf for:
+    # - only indels that intersect with the exons of interest bed file 
+    # - only insertions with length greater than 2. This will remove the 1 bp false positive insertions
+
+	mv /home/dnanexus/in/pindel_vcf/* /home/dnanexus
+	mv /home/dnanexus/in/pindel_vcf_idx/* /home/dnanexus
+
+	bcftools view -R $pindel_bed_path $pindel_vcf_name > "${pindel_vcf_prefix}.tmp.vcf"
+
+	pindel_filtered_vcf="${pindel_vcf_prefix}.filtered.vcf"
+	bcftools view -i 'INFO/LEN > 2' "${pindel_vcf_prefix}.tmp.vcf" > $pindel_filtered_vcf
+
+
 	mark-section "annotating and further filtering"
 	
 	# vep needs permissions to write to /home/dnanexus
 	chmod a+rwx /home/dnanexus
 	
-	# extract vep tarball (input) to /home/dnanexus
-	# --transform used to ensure everything is extracted and not in a sub folder
-	time tar xf "${vep_tarball_path}" -C /home/dnanexus --transform='s/.*\///'
-	
-	# extract annotation tarball to /home/dnanexus
-	time tar xf ~/homo_sapiens_refseq_vep_103_GRCh38.tar.gz
+	# extract vep reference annotation tarball to /home/dnanexus
+	time tar xf /home/dnanexus/in/vep_refs/*.tar.gz -C /home/dnanexus
 
 	# place fasta and indexes for VEP in the annotation folder
-	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz ~/homo_sapiens_refseq/103_GRCh38/
-	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz.fai ~/homo_sapiens_refseq/103_GRCh38/
-	mv ~/Homo_sapiens.GRCh38.dna.toplevel.fa.gz.gzi ~/homo_sapiens_refseq/103_GRCh38/
+	mv /home/dnanexus/in/vep_refs/*fa.gz* ~/homo_sapiens_refseq/103_GRCh38/
 
 	# place plugins into plugins folder
 	mkdir ~/Plugins
-	mv ~/CADD.pm ~/Plugins/
-	mv ~/plugin_config.txt ~/Plugins/
+	mv ~/in/vep_plugins/* ~/Plugins/
 
-	# load vep docker (asset)
-	docker load -i ~/vep_v103.1_docker.tar.gz
+
+	# load vep docker
+	docker load -i "$vep_docker_path"
 
 	# will run VEP to annotate against specified transcripts for all,
 	# lymphoid and myeloid gene lists
@@ -134,14 +163,16 @@ main() {
 	NM_001754.,NM_006758.,NM_007194.,NM_001429.,NM_005089.,NM_001123385.,NM_002049.,NM_001042750.,\
 	NM_001184772.,NM_001015877."
 
-	# annotate full VCF with VEP
+	# annotate full mutect2 VCF with VEP
 	# outputs to $splitvepfile that is then filtered by transcript lists
-	splitvepfile="${vcf_prefix}_split_filevep.vcf"
+	splitvepfile="${mutect2_vcf_prefix}_split_filevep.vcf"
 	annotate_vep_vcf "$splitfile" "$splitvepfile"
 
 
+	# filter mutect2 vcf with each set of panel transcripts
+
 	# filter with VEP for all gene transcripts
-	allgenesvepfile="${vcf_prefix}_allgenesvep.vcf"
+	allgenesvepfile="${mutect2_vcf_prefix}_allgenesvep.vcf"
 
 	filter_vep_vcf "$splitvepfile" "$allgenesvepfile" "$all_genes_transcripts"
 
@@ -150,7 +181,7 @@ main() {
 	lymphoid_transcripts="NM_000051.,NM_001165.,NM_004333.,NM_004380.,NM_001429.,NM_004456.,\
 	NM_033632.,NM_005343.,NM_033360.,NM_002468.,NM_017617.,NM_002524.,NM_016734.,NM_012433.,\
 	NM_139276.,NM_012448.,NM_000546."
-	lymphoidvepfile="${vcf_prefix}_pan-lymphoidvep.vcf"
+	lymphoidvepfile="${mutect2_vcf_prefix}_pan-lymphoidvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$lymphoidvepfile" "$lymphoid_transcripts"
 
@@ -162,7 +193,7 @@ main() {
 	NM_001136023.,NM_017617.,NM_002520.,NM_002524.,NM_016734.,NM_001015877.,NM_003620.,NM_000314.,\
 	NM_002834.,NM_006265.,NM_001754.,NM_015559.,NM_012433.,NM_005475.,NM_001195427.,NM_001042750.,\
 	NM_139276.,NM_012448.,NM_001127208.,NM_000546.,NM_006758.,NM_024426.,NM_005089."
-	myeloidvepfile="${vcf_prefix}_myeloidvep.vcf"
+	myeloidvepfile="${mutect2_vcf_prefix}_myeloidvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$myeloidvepfile" "$myeloid_transcripts"
 
@@ -170,35 +201,44 @@ main() {
 	# filter with VEP for CLL_Extended genes list
 	cll_transcripts="NM_001165.,NM_004333.,NM_033632.,NM_005343.,NM_033360.,NM_002468.,NM_017617.,\
 	NM_002524.,NM_012433.,NM_000546.,NM_000051."
-	cllvepfile="${vcf_prefix}_CLL-extendedvep.vcf"
+	cllvepfile="${mutect2_vcf_prefix}_CLL-extendedvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$cllvepfile" "$cll_transcripts"
 
 
 	# filter with VEP for TP53
-	tp53vepfile="${vcf_prefix}_TP53vep.vcf"
+	tp53vepfile="${mutect2_vcf_prefix}_TP53vep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$tp53vepfile" "NM_000546."
 
 
 	# filter with VEP for LGL
 	lgl_transcripts="NM_139276.,NM_012448."
-	lglvepfile="${vcf_prefix}_LGLvep.vcf"
+	lglvepfile="${mutect2_vcf_prefix}_LGLvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$lglvepfile" "$lgl_transcripts"
 
 
 	# run vep for HCL
-	hclvepfile="${vcf_prefix}_HCLvep.vcf"
+	hclvepfile="${mutect2_vcf_prefix}_HCLvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$hclvepfile" "NM_004333."
 
 
 	# run vep for LPL
-	lplvepfile=${vcf_prefix}_LPLvep.vcf
+	lplvepfile=${mutect2_vcf_prefix}_LPLvep.vcf
 
 	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468."
 
+	# annotate pindel vcf with VEP
+	pindel_annotated="${pindel_vcf_prefix}_annotated.vcf"
+	annotate_vep_vcf "$pindel_filtered_vcf" "$pindel_annotated"
+
+	# filter pindel vcf by transcripts
+	pindel_transcripts="NM_004119.,NM_004343.,NM_004364."
+	pindelvepfile="${pindel_vcf_prefix}_vep.vcf"
+
+	filter_vep_vcf "$pindel_annotated" "$pindelvepfile" "$pindel_transcripts"
 
 	mark-section "BSVI workaround (overwriting GT) and creating variant list"
 
@@ -209,19 +249,20 @@ main() {
 	# note that order of VCFs passed to -v determines order of sheets in excel
 	time python3 vcf_handler.py -a "${allgenesvepfile}" \
 	-v "${myeloidvepfile}" "${cllvepfile}" "${tp53vepfile}" "${lglvepfile}" \
-	"${hclvepfile}" "${lplvepfile}" "${lymphoidvepfile}"
+	"${hclvepfile}" "${lplvepfile}" "${lymphoidvepfile}" -p "$pindelvepfile"
 
 	mark-section "uploading output"
 
 	# make required output directories and move files
 	mkdir -p ~/out/allgenes_filtered_vcf ~/out/lymphoid_filtered_vcf/ ~/out/myeloid_filtered_vcf/\
 		~/out/cll_filtered_vcf ~/out/tp53_filtered_vcf ~/out/lgl_filtered_vcf ~/out/hcl_filtered_vcf\
-		~/out/lpl_filtered_vcf ~/out/bsvi_vcf ~/out/text_report ~/out/excel_report
+		~/out/lpl_filtered_vcf ~/out/bsvi_vcf ~/out/text_report ~/out/excel_report ~/out/pindel_vep_vcf
 
-	bsvivcf="${vcf_prefix}_allgenes_bsvi.vcf"
-	variantlist="${vcf_prefix}_allgenes.tsv"
-	excellist="${vcf_prefix}_panels.xlsx"
+	bsvivcf="${mutect2_vcf_prefix}_allgenes_bsvi.vcf"
+	variantlist="${mutect2_vcf_prefix}_allgenes.tsv"
+	excellist="${mutect2_vcf_prefix}_panels.xlsx"
 
+	mv ~/"${pindelvepfile}" ~/out/pindel_vep_vcf/
 	mv ~/"${allgenesvepfile}" ~/out/allgenes_filtered_vcf/
 	mv ~/"${lymphoidvepfile}" ~/out/lymphoid_filtered_vcf/
 	mv ~/"${myeloidvepfile}" ~/out/myeloid_filtered_vcf/

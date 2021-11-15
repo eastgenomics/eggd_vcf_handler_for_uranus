@@ -1,9 +1,9 @@
 # eggd vcf handler for uranus
 
 ## What does this app do?
-### This app uses bedtools, bcftools and VEP to take VCFs from sentieon mutect2 and:
-- Annotates and filters the sentieon mutect2 VCF
-- Produces a excel workbook with sub-panels presented in separate sheets; also provides preformatted text to aid Epic data entry
+### This app uses bedtools, bcftools and VEP to take VCFs from sentieon mutect2 and pindel:
+- Annotates and filters sentieon mutect2 and pindel VCFs
+- Produces an excel workbook with sub-panels presented in separate sheets; also provides preformatted text to aid Epic data entry
 - Produces a VCF that can be used as input for BSVI, as BSVI can't handle mutect2's (VCFv4.2 compliant) representation of multiallelic variants in VCF
 
 ## What are typical use cases for this app?
@@ -12,23 +12,34 @@
 * bedtools (v2.30.0)
 * python_packages (numpy-1.20.1, pandas-1.2.3, pytz-2021.1, XlsxWriter-1.4.0)
 
-### This app uses the following provided as inputs (these are all actually bundled into a single "VEP_tarball"):
+### This app uses the following provided as inputs:
+
 * VEP (v103.1) (docker image)
 * VEP refseq (v103) annotation sources
 * CADD (v1.6) which now includes splicing
 * ClinVar VCF (20210501 release) modified to add chr prefix
-* merged VCF containing counts of each variant detected known set of samples (provided as separate input from tarball)
-    * default provided is from <b>205</b> NovaSeq samples (as of 211007)
-    * the process for generating this VCF and from what samples is documented [here](https://cuhbioinformatics.atlassian.net/wiki/spaces/URA/pages/2415591443/Creation+of+Myeloid+NovaSeq+samples+MAF+file)
+* Merged VCF containing counts of each variant detected known set of samples (provided as separate input from tarball)
+    
 
 ### This app has access to the Internet
 
 ## What data are required for this app to run?
 - VCF output from sentieon mutect2 as part of Uranus workflow
+- VCF output (+ index) from cgppindel as part of Uranus workflow
 - BED file that details ROIs for myeloid NGS panel (default specified)
+- BED file that details ROIs for filtering cgppindel output (default specified)
 - Genome FASTA and index that was used by to generate the VCF (default specified)
-- VEP tarball consisting of VEP docker, plugins and annotation sources (default specified)
+- VEP docker image (`vep_docker`, default specified)
+- VEP plugins (`vep_plugins`, defaults specified)
+- VEP reference files (`vep_refs`, defaults specified)
+- VEP annotation sources (`vep_annotation`, defaults specified)
+    - Cosmic Coding Variants VCF (v94)
+    - Cosmic NonCoding Variants VCF (v94)
+    - ClinVar VCF (20211002)
+    - CADD (v1.6)
 - MAF file created from known set of samples (default specified)
+    - default provided is from **205** NovaSeq samples (as of 211007)
+    - the process for generating this VCF and from what samples is documented [here](https://cuhbioinformatics.atlassian.net/wiki/spaces/URA/pages/2415591443/Creation+of+Myeloid+NovaSeq+samples+MAF+file)
 
 ## What does this app output?
 - Excel workbook of annotated variants
@@ -36,15 +47,18 @@
 - Intermediate VCFs
 
 ## How does this app work?
-- Filters VCF with bedtools:
+- Filters mutect2 VCF with bedtools:
     - retain variants within ROI
-- Filters VCF with bcftools:
+- Filters mutect2 VCF with bcftools:
     - retain positions where at least one variant has AF > 0.03
     - retain positions where DP >99
     - split multiallelics using `--keep-sum AD` which changes the ref AD to be the sum of AD's
     - split multiallelics requires fixing AD and RPA number field in header from `.` to `R`
-- Annotates VCF with VEP:
-    - Annotate against specified refseq transcripts with
+- Filters cgppindel VCF with bcftools:
+    - only indels that intersect with the exons of interest bed file 
+    - only insertions with length greater than 2. This will remove the 1 bp false positive insertions.
+- Annotates mutect2 **and** cgppindel VCF with VEP:
+    - Annotate against specified RefSeq transcripts with:
         - gene symbol
         - variant class
         - variant consequence
@@ -58,10 +72,11 @@
         - ClinVar
         - CADD
         - previous counts
-- Filters VCF with VEP:
+- Filters VCFs with VEP:
     - Retain variants with gnomAD AF < 0.1
     - Remove synonymous variants
-- Generates variant lists (one panel per sheet) in an excel workbook
+    - Filters by transcripts defined in `code.sh` for each panel
+- Generates variant lists (one panel + pindel VCF per sheet) in an excel workbook
 - Generates BSVI-friendly VCF
 
 ## Limitations
