@@ -175,6 +175,7 @@ def get_field_value(column, index):
 def filter_common(vcf_df):
     """
     Filters for common variants by prev_count > 50% & synonymous variants
+    EXCEPT in TP53 and
 
     Args: vcf_df (df): df of variants
 
@@ -183,20 +184,20 @@ def filter_common(vcf_df):
         - filter_vcf (df): df of filtered out common variants
     """
     # prev_count formatted as prev_ac/prev_samples (i.e. 45/205)
-    filter_idxs = np.where(
+    filter_idxs = np.where((
         vcf_df['Prev_Count'].apply(
             lambda x: (int(x.split("/")[0]) / int(x.split("/")[1])) > 0.5
         ) | (
             vcf_df['CONSEQ'] == 'synonymous_variant'
-        )
-    )
+        )) & (
+            np.logical_not(vcf_df['GENE'].isin(['TP53', 'GATA2']))
+    ))
 
     # filter df by indixes of filter conditions
     filtered_df = vcf_df.loc[filter_idxs]
     vcf_df = vcf_df.drop(filter_idxs[0])
 
     return vcf_df, filtered_df
-
 
 
 def df_report_formatting(panel, vcf_df):
