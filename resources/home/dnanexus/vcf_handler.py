@@ -30,6 +30,7 @@ from pathlib import Path
 import re
 # import subprocess
 import sys
+import numpy as np
 import pandas as pd
 # import xlsxwriter
 
@@ -171,6 +172,33 @@ def get_field_value(column, index):
     return column.apply(lambda x: int(x.split(':')[index]))
 
 
+def filter_common(vcf_df):
+    """
+    Filters for common variants by prev_count > 50% & synonymous variants
+
+    Args: vcf_df (df): df of variants
+
+    Returns:
+        - vcf (df): df of unfiltered variants
+        - filter_vcf (df): df of filtered out common variants
+    """
+    # prev_count formatted as prev_ac/prev_samples (i.e. 45/205)
+    filter_idxs = np.where(
+        vcf_df['Prev_Count'].apply(
+            lambda x: (int(x.split("/")[0]) / int(x.split("/")[1])) > 0.5
+        ) | (
+            vcf_df['CONSEQ'] == 'synonymous_variant'
+        )
+    )
+
+    # filter df by indixes of filter conditions
+    filtered_df = vcf_df.loc[filter_idxs]
+    vcf_df = vcf_df.drop(filter_idxs[0])
+
+    return vcf_df, filtered_df
+
+
+
 def df_report_formatting(panel, vcf_df):
     """
     Formats df of vcf records for report with INFO column split out to
@@ -213,8 +241,26 @@ def df_report_formatting(panel, vcf_df):
 
     # remove info id from gene
     vcf_df['GENE'] = vcf_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
+    print('hi')
 
-    # calc Prev_count
+    # calculate Prev_count, first adjust those nor previously seen that have
+    # empty strings for prev_ac and prev_ns
+
+    # first get total number of samples across all, should return single value
+    uniq_prev_ns = list(set(filter(None, vcf_df['Prev_NS'])))
+
+    assert len(uniq_prev_ns) == 1, \
+        f"Differing total previous samples identified: {uniq_prev_ns}"
+
+    uniq_prev_ns = uniq_prev_ns[0]
+
+    # those not previously seen will have empty string, fill appropriatley to
+    # display as 0/{total}
+    vcf_df['Prev_AC'] = vcf_df['Prev_AC'].apply(
+        lambda x: str(0) if x == "" else x)
+    vcf_df['Prev_NS'] = vcf_df['Prev_NS'].apply(
+        lambda x: uniq_prev_ns if x == "" else x)
+
     vcf_df['Prev_Count'] = vcf_df['Prev_AC'] + '/' + vcf_df['Prev_NS']
 
     if panel == "pindel":
@@ -408,7 +454,7 @@ def write_xlsx(fname, vcfs_dict):
 
     for panel_name, vcf_df in vcfs_dict.items():
         # loop over panel dfs, write to sheet & apply formatting
-        vcf_df.to_excel(writer, sheet_name=panel_name)
+        vcf_df.to_excel(writer, sheet_name=panel_name, index=False)
         # fun excel formatting
         worksheet = writer.sheets[panel_name]
         wrap_format = workbook.add_format({'text_wrap': True})
@@ -451,12 +497,19 @@ if __name__ == "__main__":
     # apply formatting to allgenes vcf df for tsv file
     all_genes_df = df_report_formatting(fname, all_genes_df)
 
+    formatted_dfs = {}
+
     # apply formatting to each panel df for xlsx file
     for panel, vcf_df in vcfs_dict.items():
         if not vcf_df.empty:
             vcf_df = df_report_formatting(panel, vcf_df)
-            vcfs_dict[panel] = vcf_df
+            formatted_dfs[panel] = vcf_df
+        if panel == 'myeloid':
+            # filtering myeloid panel for common variants
+            vcf_df, filter_vcf_df = filter_common(vcf_df)
+            formatted_dfs['myeloid'] = vcf_df
+            formatted_dfs['myeloid_filtered'] = filter_vcf_df
 
     write_bsvi_vcf(fname, bsvi_vcf_df, all_genes_df_header)
     write_tsv(fname, all_genes_df)
-    write_xlsx(fname, vcfs_dict)
+    write_xlsx(fname, formatted_dfs)
