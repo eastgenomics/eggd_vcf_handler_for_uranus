@@ -154,7 +154,7 @@ def get_field_index(column, field):
 
     Returns: index of given field
     """
-    return column.apply(lambda x: x.split(':').index(field)).to_list()[0]
+    return list(column.apply(lambda x: x.split(':').index(field)))[0]
 
 
 def get_field_value(column, index):
@@ -248,11 +248,11 @@ def df_report_formatting(panel, vcf_df):
     else:
         # mutect2 vcf
         caller = "Mutect2"
-        print(vcf_df['FORMAT'])
+
         # get index of AF in format column, should all be same and have a
         # list with 1 value, used to get AF from the sample column
         af_index = list(set(vcf_df['FORMAT'].apply(
-            lambda x: x.split(':').index('AF')).to_list()
+            lambda x: x.split(':').index('AF'))
         ))
 
         # sense check all AF at same index
@@ -404,7 +404,7 @@ def write_xlsx(fname, vcfs_dict):
     workbook = writer.book
 
     # empty reporting sheet
-    worksheet = writer.sheets['to report']
+    worksheet = workbook.add_worksheet('to report')
 
     for panel_name, vcf_df in vcfs_dict.items():
         # loop over panel dfs, write to sheet & apply formatting
