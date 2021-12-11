@@ -25,13 +25,13 @@ Outputs:
 """
 
 import argparse
-import io
+# import io
 from pathlib import Path
 import re
-import subprocess
+# import subprocess
 import sys
 import pandas as pd
-import xlsxwriter
+# import xlsxwriter
 
 
 def parse_args():
@@ -248,7 +248,7 @@ def df_report_formatting(panel, vcf_df):
     else:
         # mutect2 vcf
         caller = "Mutect2"
-
+        print(vcf_df['FORMAT'])
         # get index of AF in format column, should all be same and have a
         # list with 1 value, used to get AF from the sample column
         af_index = list(set(vcf_df['FORMAT'].apply(
@@ -304,6 +304,10 @@ def df_report_formatting(panel, vcf_df):
     regex = re.compile(r'^[p\.]*')
     vcf_df['HGVSp'] = vcf_df['HGVSp'].apply(
         lambda x: regex.sub('p.(', x) + ')' if x else None)
+
+    print(vcf_df)
+    # sys.exit()
+
 
     # add interestingly formatted report text column
     vcf_df['Report_text'] = vcf_df[vcf_df.columns.tolist()].apply(
@@ -398,6 +402,9 @@ def write_xlsx(fname, vcfs_dict):
     # write excel
     writer = pd.ExcelWriter(excel_fname, engine="xlsxwriter")
     workbook = writer.book
+
+    # empty reporting sheet
+    worksheet = writer.sheets['to report']
 
     for panel_name, vcf_df in vcfs_dict.items():
         # loop over panel dfs, write to sheet & apply formatting
