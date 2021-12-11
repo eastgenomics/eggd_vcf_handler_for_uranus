@@ -352,10 +352,6 @@ def df_report_formatting(panel, vcf_df):
     vcf_df['HGVSp'] = vcf_df['HGVSp'].apply(
         lambda x: regex.sub('p.(', x) + ')' if x else None)
 
-    print(vcf_df)
-    # sys.exit()
-
-
     # add interestingly formatted report text column
     vcf_df['Report_text'] = vcf_df[vcf_df.columns.tolist()].apply(
         lambda x: (
