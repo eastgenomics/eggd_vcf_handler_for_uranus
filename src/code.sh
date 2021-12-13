@@ -16,7 +16,7 @@ function annotate_vep_vcf {
 
 	input_vcf="$1"
 	output_vcf="$2"
-	
+
 	# fields to filter on
 	# hard coded in function for now, can be made an input but all are the same
 	filter_fields="SYMBOL,VARIANT_CLASS,Consequence,EXON,HGVSc,HGVSp,gnomAD_AF,CADD_PHRED,Existing_variation,ClinVar,ClinVar_CLNDN,ClinVar_CLNSIG,COSMIC,Prev_AC,Prev_NS,Feature"
@@ -62,11 +62,11 @@ function filter_vep_vcf {
 
 	# transcript list should be comma separated, format for passing to VEP
 	transcript_list=$(echo "$transcript_list" | sed 's/[[:space:]]//g')  # remove any whitespace
-	
+
 	# vep filter with match uses regex, therefore we need to change any . to be escaped as \. to
 	# stop it being treat as any single character
-	transcript_list=$(echo "$transcript_list" | sed 's/\./\\./g')  
-	
+	transcript_list=$(echo "$transcript_list" | sed 's/\./\\./g')
+
 	# add required Feature match prepended to every transcript for filtering
 	transcript_list=$(echo "$transcript_list" | sed 's/,/ or Feature match /g')
 	transcript_list="(Feature match ${transcript_list})"
@@ -109,7 +109,7 @@ main() {
 
 	time bedtools intersect -header -a "${mutect2_vcf_path}" -b "${mutect2_bed_path}" \
 	| bcftools view -i "FORMAT/AF[*]>0.03" - \
-	| bcftools view -i "DP>99" - \
+	| bcftools view -i "INFO/DP>99" - \
 	| sed 's/AD,Number=./AD,Number=R/g' \
 	| sed 's/RPA,Number=./RPA,Number=R/g' \
 	| bcftools norm -f "${mutect2_fasta_path}" -m -any --keep-sum AD - \
@@ -117,7 +117,7 @@ main() {
 
 	mark-section "filtering pindel VCF"
 	# Filtering of pindel vcf for:
-    # - only indels that intersect with the exons of interest bed file 
+    # - only indels that intersect with the exons of interest bed file
     # - only insertions with length greater than 2. This will remove the 1 bp false positive insertions
 
 	mv /home/dnanexus/in/pindel_vcf/* /home/dnanexus
@@ -130,10 +130,10 @@ main() {
 
 
 	mark-section "annotating and further filtering"
-	
+
 	# vep needs permissions to write to /home/dnanexus
 	chmod a+rwx /home/dnanexus
-	
+
 	# extract vep reference annotation tarball to /home/dnanexus
 	time tar xf /home/dnanexus/in/vep_refs/*.tar.gz -C /home/dnanexus
 
