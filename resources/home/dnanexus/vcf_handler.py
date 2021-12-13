@@ -175,7 +175,7 @@ def get_field_value(column, index):
 def filter_common(vcf_df):
     """
     Filters for common variants by prev_count > 50% & synonymous variants
-    EXCEPT in TP53 and
+    EXCEPT in TP53 and GATA2
 
     Args: vcf_df (df): df of variants
 
@@ -242,7 +242,6 @@ def df_report_formatting(panel, vcf_df):
 
     # remove info id from gene
     vcf_df['GENE'] = vcf_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
-    print('hi')
 
     # calculate Prev_count, first adjust those nor previously seen that have
     # empty strings for prev_ac and prev_ns
