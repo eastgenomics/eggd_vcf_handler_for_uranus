@@ -78,6 +78,7 @@ def read_vcf(input_vcf):
         - vcf_df (df): df of variants from vcf
         - vcf_header (list): header from vcf, for writing output (bsvi) vcf
     """
+    print(input_vcf)
     # read in vcf to get header lines
     with open(input_vcf, 'r') as fh:
         vcf_data = fh.readlines()
@@ -506,7 +507,7 @@ def write_xlsx(fname, vcfs_dict):
     worksheet = writer.sheets['to report']
 
     # set specific cells to be bold in to report tab
-    for cell in ['A12:A12', 'D12:D12', 'F8:F10']:
+    for cell in ['A14:A14', 'D14:D14', 'F10:F12']:
         header_format = workbook.add_format({'bold': True,})
         worksheet.conditional_format(
             cell, {'type': 'no_errors', 'format': header_format}
@@ -514,7 +515,7 @@ def write_xlsx(fname, vcfs_dict):
 
     # set dynamic column widths on cell content
     worksheet = set_column_widths(worksheet, report_df)
-
+    worksheet.set_row(0, 12)
 
     for panel_name, vcf_df in vcfs_dict.items():
         # loop over panel dfs, write to sheet & apply formatting
@@ -525,7 +526,7 @@ def write_xlsx(fname, vcfs_dict):
         worksheet.set_column(1, 21, 15)
         worksheet.set_column(22, 22, 70, wrap_format)
         worksheet.set_default_row(100)
-        worksheet.set_row(0, 15)
+        worksheet.set_row(0, 12)
 
         # set dynamic column widths on cell content
         worksheet = set_column_widths(worksheet, vcf_df)
