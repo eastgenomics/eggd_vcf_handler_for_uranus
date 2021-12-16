@@ -78,7 +78,6 @@ def read_vcf(input_vcf):
         - vcf_df (df): df of variants from vcf
         - vcf_header (list): header from vcf, for writing output (bsvi) vcf
     """
-    print(input_vcf)
     # read in vcf to get header lines
     with open(input_vcf, 'r') as fh:
         vcf_data = fh.readlines()
@@ -252,7 +251,7 @@ def df_report_formatting(panel, vcf_df):
 
     uniq_prev_ns = uniq_prev_ns[0]
 
-    # those not previously seen will have empty string, fill appropriatley to
+    # those not previously seen will have empty string, fill appropriately to
     # display as 0/{total}
     vcf_df['Prev_AC'] = vcf_df['Prev_AC'].apply(
         lambda x: str(0) if x == "" else x)
@@ -386,7 +385,7 @@ def to_report_formatting(col_names):
     """
     Build df of required placeholder text for the to report sheet
 
-    Args: sheet (openpyxl sheet): list of column names from a panel df
+    Args: col_names (list): list of column names from a panel df
 
     Returns: report_df (df): formatted dataframe wth placeholder text as report
         template in specific cells
@@ -419,6 +418,12 @@ def to_report_formatting(col_names):
 def set_column_widths(worksheet, df):
     """
     Sets column widths dyanmically based on cell content
+
+    Args:
+        - worksheet (xlsxwriter sheet object): sheet to modify
+        - df (pd.DataFrame): dataframe for sheet to set widths from
+    Returns:
+        - - worksheet (xlsxwriter sheet object): xlsx sheet with new widths
     """
     for idx, col in enumerate(df):
         # specific formatting for columns with potential very long text
@@ -508,7 +513,7 @@ def write_xlsx(fname, vcfs_dict):
 
     # set specific cells to be bold in to report tab
     for cell in ['A14:A14', 'D14:D14', 'F10:F12']:
-        header_format = workbook.add_format({'bold': True,})
+        header_format = workbook.add_format({'bold': True})
         worksheet.conditional_format(
             cell, {'type': 'no_errors', 'format': header_format}
     )
