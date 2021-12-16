@@ -503,8 +503,6 @@ def write_xlsx(fname, vcfs_dict):
     workbook = writer.book
 
     # get the column names of a df to write to report sheet
-    # report_worksheet = writer.sheets["to_report"]
-    # worksheet = workbook.add_worksheet('to report')
     header = vcfs_dict[next(iter(vcfs_dict))].columns
     report_df = to_report_formatting(col_names=header)
     report_df.to_excel(writer, sheet_name='to report', index=False)
