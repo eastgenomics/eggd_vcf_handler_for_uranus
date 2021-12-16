@@ -391,7 +391,8 @@ def to_report_formatting(col_names):
         template in specific cells
     """
     report_df = pd.DataFrame(columns=col_names).astype('object')
-    report_df = report_df.append([pd.Series([np.nan])] * 12).reindex(col_names, axis=1)
+    report_df = report_df.append(
+        [pd.Series([np.nan])] * 12).reindex(col_names, axis=1)
 
     col1_labels = [
         "Run QC", "250x", "Contamination", "Total reads M", "Fold 80",
@@ -514,7 +515,7 @@ def write_xlsx(fname, vcfs_dict):
         header_format = workbook.add_format({'bold': True})
         worksheet.conditional_format(
             cell, {'type': 'no_errors', 'format': header_format}
-    )
+        )
 
     # set dynamic column widths on cell content
     worksheet = set_column_widths(worksheet, report_df)
