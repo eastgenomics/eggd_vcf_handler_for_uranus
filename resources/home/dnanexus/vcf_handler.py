@@ -390,7 +390,10 @@ def to_report_formatting(col_names):
     Returns: report_df (df): formatted dataframe wth placeholder text as report
         template in specific cells
     """
+    # add the column names for when they paste in reported variants
     report_df = pd.DataFrame(columns=col_names).astype('object')
+
+    # add 12 empty rows as padding for visualise niceness
     report_df = report_df.append(
         [pd.Series([np.nan])] * 12).reindex(col_names, axis=1)
 
@@ -399,17 +402,20 @@ def to_report_formatting(col_names):
         "Insert Size",
     ]
 
-    col6_labels = ["Analysed by", "Date", "Subpanel analysed"]
 
     for label in col1_labels:
+        # set each of the col1 labels as a field in first column
         report_df = report_df.append(
             {report_df.columns[0]: label}, ignore_index=True
         )
 
     report_df.at[12, report_df.columns[3]] = "Sample QC"
 
+    col6_labels = ["Analysed by", "Date", "Subpanel analysed"]
     col6_label_idx = 8
+
     for label in col6_labels:
+        # start at row 8, add each of col6 labels as field in column 6
         report_df.at[col6_label_idx, report_df.columns[5]] = label
         col6_label_idx += 1
 
