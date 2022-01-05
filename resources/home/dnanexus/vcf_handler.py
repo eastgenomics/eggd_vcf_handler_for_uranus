@@ -242,7 +242,6 @@ def df_report_formatting(panel, vcf_df):
 
     # remove info id from gene
     vcf_df['GENE'] = vcf_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
-    print('hi')
 
     # calculate Prev_count, first adjust those nor previously seen that have
     # empty strings for prev_ac and prev_ns
@@ -356,7 +355,7 @@ def df_report_formatting(panel, vcf_df):
     vcf_df['Report_text'] = vcf_df[vcf_df.columns.tolist()].apply(
         lambda x: (
             f"{x['GENE']} {x['CONSEQ']} "
-            f"{'in ' + x['EXON'] if x['EXON'] else ''} \n"
+            f"{'in ' + x['EXON'].split('/')[0] if x['EXON'] else ''} \n"
             f"HGVSc: {x['HGVSc'] if x['HGVSc'] else 'None'} \n"
             f"HGVSp: {x['HGVSp'] if x['HGVSp'] else 'None'} \n"
             f"COSMIC ID: {x['COSMIC'] if x['COSMIC'] else 'None'} \n"
