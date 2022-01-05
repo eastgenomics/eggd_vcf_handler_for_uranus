@@ -25,14 +25,11 @@ Outputs:
 """
 
 import argparse
-# import io
 from pathlib import Path
 import re
-# import subprocess
 import sys
 import numpy as np
 import pandas as pd
-# import xlsxwriter
 
 
 def parse_args():
@@ -175,7 +172,7 @@ def get_field_value(column, index):
 def filter_common(vcf_df):
     """
     Filters for common variants by prev_count > 50% & synonymous variants
-    EXCEPT in TP53 and
+    EXCEPT in TP53 and GATA2
 
     Args: vcf_df (df): df of variants
 
@@ -254,7 +251,7 @@ def df_report_formatting(panel, vcf_df):
 
     uniq_prev_ns = uniq_prev_ns[0]
 
-    # those not previously seen will have empty string, fill appropriatley to
+    # those not previously seen will have empty string, fill appropriately to
     # display as 0/{total}
     vcf_df['Prev_AC'] = vcf_df['Prev_AC'].apply(
         lambda x: str(0) if x == "" else x)
@@ -384,6 +381,67 @@ def df_report_formatting(panel, vcf_df):
     return vcf_df
 
 
+def to_report_formatting(col_names):
+    """
+    Build df of required placeholder text for the to report sheet
+
+    Args: col_names (list): list of column names from a panel df
+
+    Returns: report_df (df): formatted dataframe wth placeholder text as report
+        template in specific cells
+    """
+    report_df = pd.DataFrame(columns=col_names).astype('object')
+    report_df = report_df.append(
+        [pd.Series([np.nan])] * 12).reindex(col_names, axis=1)
+
+    col1_labels = [
+        "Run QC", "250x", "Contamination", "Total reads M", "Fold 80",
+        "Insert Size",
+    ]
+
+    col6_labels = ["Analysed by", "Date", "Subpanel analysed"]
+
+    for label in col1_labels:
+        report_df = report_df.append(
+            {report_df.columns[0]: label}, ignore_index=True
+        )
+
+    report_df.at[12, report_df.columns[3]] = "Sample QC"
+
+    col6_label_idx = 8
+    for label in col6_labels:
+        report_df.at[col6_label_idx, report_df.columns[5]] = label
+        col6_label_idx += 1
+
+    return report_df
+
+
+def set_column_widths(worksheet, df):
+    """
+    Sets column widths dyanmically based on cell content
+
+    Args:
+        - worksheet (xlsxwriter sheet object): sheet to modify
+        - df (pd.DataFrame): dataframe for sheet to set widths from
+    Returns:
+        - - worksheet (xlsxwriter sheet object): xlsx sheet with new widths
+    """
+    for idx, col in enumerate(df):
+        # specific formatting for columns with potential very long text
+        if "ClinVar" in col:
+            max_len = 15
+        elif "Report_text" in col:
+            max_len = 40
+        else:
+            series = df[col]
+            max_len = max((
+                series.astype(str).map(len).max(), len(str(series.name))
+            )) + 2
+        worksheet.set_column(idx, idx, max_len)  # set column width
+
+    return worksheet
+
+
 def write_bsvi_vcf(fname, bsvi_df, bsvi_vcf_header):
     """
     Write df of variants with modified genotype to vcf for BSVI
@@ -445,8 +503,23 @@ def write_xlsx(fname, vcfs_dict):
     writer = pd.ExcelWriter(excel_fname, engine="xlsxwriter")
     workbook = writer.book
 
-    # empty reporting sheet
-    worksheet = workbook.add_worksheet('to report')
+    # get the column names of a df to write to report sheet
+    header = vcfs_dict[next(iter(vcfs_dict))].columns
+    report_df = to_report_formatting(col_names=header)
+    report_df.to_excel(writer, sheet_name='to report', index=False)
+
+    worksheet = writer.sheets['to report']
+
+    # set specific cells to be bold in to report tab
+    for cell in ['A14:A14', 'D14:D14', 'F10:F12']:
+        header_format = workbook.add_format({'bold': True})
+        worksheet.conditional_format(
+            cell, {'type': 'no_errors', 'format': header_format}
+        )
+
+    # set dynamic column widths on cell content
+    worksheet = set_column_widths(worksheet, report_df)
+    worksheet.set_row(0, 12)
 
     for panel_name, vcf_df in vcfs_dict.items():
         # loop over panel dfs, write to sheet & apply formatting
@@ -457,7 +530,10 @@ def write_xlsx(fname, vcfs_dict):
         worksheet.set_column(1, 21, 15)
         worksheet.set_column(22, 22, 70, wrap_format)
         worksheet.set_default_row(100)
-        worksheet.set_row(0, 15)
+        worksheet.set_row(0, 12)
+
+        # set dynamic column widths on cell content
+        worksheet = set_column_widths(worksheet, vcf_df)
 
     writer.save()
 
