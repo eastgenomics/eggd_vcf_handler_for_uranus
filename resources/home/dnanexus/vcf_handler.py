@@ -240,7 +240,7 @@ def df_report_formatting(panel, vcf_df):
     # remove info id from gene
     vcf_df['GENE'] = vcf_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
 
-    # calculate Prev_count, first adjust those nor previously seen that have
+    # calculate Prev_count, first adjust those not previously seen that have
     # empty strings for prev_ac and prev_ns
 
     # first get total number of samples across all, should return single value
