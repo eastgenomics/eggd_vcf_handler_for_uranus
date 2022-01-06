@@ -25,13 +25,11 @@ Outputs:
 """
 
 import argparse
-import io
 from pathlib import Path
 import re
-import subprocess
 import sys
+import numpy as np
 import pandas as pd
-import xlsxwriter
 
 
 def parse_args():
@@ -154,7 +152,7 @@ def get_field_index(column, field):
 
     Returns: index of given field
     """
-    return column.apply(lambda x: x.split(':').index(field)).to_list()[0]
+    return list(column.apply(lambda x: x.split(':').index(field)))[0]
 
 
 def get_field_value(column, index):
@@ -169,6 +167,34 @@ def get_field_value(column, index):
     Returns: series of values selected by index
     """
     return column.apply(lambda x: int(x.split(':')[index]))
+
+
+def filter_common(vcf_df):
+    """
+    Filters for common variants by prev_count > 50% & synonymous variants
+    EXCEPT in TP53 and GATA2
+
+    Args: vcf_df (df): df of variants
+
+    Returns:
+        - vcf (df): df of unfiltered variants
+        - filter_vcf (df): df of filtered out common variants
+    """
+    # prev_count formatted as prev_ac/prev_samples (i.e. 45/205)
+    filter_idxs = np.where((
+        vcf_df['Prev_Count'].apply(
+            lambda x: (int(x.split("/")[0]) / int(x.split("/")[1])) > 0.5
+        ) | (
+            vcf_df['CONSEQ'] == 'synonymous_variant'
+        )) & (
+            np.logical_not(vcf_df['GENE'].isin(['TP53', 'GATA2']))
+    ))
+
+    # filter df by indixes of filter conditions
+    filtered_df = vcf_df.loc[filter_idxs]
+    vcf_df = vcf_df.drop(filter_idxs[0])
+
+    return vcf_df, filtered_df
 
 
 def df_report_formatting(panel, vcf_df):
@@ -214,7 +240,24 @@ def df_report_formatting(panel, vcf_df):
     # remove info id from gene
     vcf_df['GENE'] = vcf_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
 
-    # calc Prev_count
+    # calculate Prev_count, first adjust those not previously seen that have
+    # empty strings for prev_ac and prev_ns
+
+    # first get total number of samples across all, should return single value
+    uniq_prev_ns = list(set(filter(None, vcf_df['Prev_NS'])))
+
+    assert len(uniq_prev_ns) == 1, \
+        f"Differing total previous samples identified: {uniq_prev_ns}"
+
+    uniq_prev_ns = uniq_prev_ns[0]
+
+    # those not previously seen will have empty string, fill appropriately to
+    # display as 0/{total}
+    vcf_df['Prev_AC'] = vcf_df['Prev_AC'].apply(
+        lambda x: str(0) if x == "" else x)
+    vcf_df['Prev_NS'] = vcf_df['Prev_NS'].apply(
+        lambda x: uniq_prev_ns if x == "" else x)
+
     vcf_df['Prev_Count'] = vcf_df['Prev_AC'] + '/' + vcf_df['Prev_NS']
 
     if panel == "pindel":
@@ -252,7 +295,7 @@ def df_report_formatting(panel, vcf_df):
         # get index of AF in format column, should all be same and have a
         # list with 1 value, used to get AF from the sample column
         af_index = list(set(vcf_df['FORMAT'].apply(
-            lambda x: x.split(':').index('AF')).to_list()
+            lambda x: x.split(':').index('AF'))
         ))
 
         # sense check all AF at same index
@@ -309,7 +352,7 @@ def df_report_formatting(panel, vcf_df):
     vcf_df['Report_text'] = vcf_df[vcf_df.columns.tolist()].apply(
         lambda x: (
             f"{x['GENE']} {x['CONSEQ']} "
-            f"{'in ' + x['EXON'] if x['EXON'] else ''} \n"
+            f"{'in ' + x['EXON'].split('/')[0] if x['EXON'] else ''} \n"
             f"HGVSc: {x['HGVSc'] if x['HGVSc'] else 'None'} \n"
             f"HGVSp: {x['HGVSp'] if x['HGVSp'] else 'None'} \n"
             f"COSMIC ID: {x['COSMIC'] if x['COSMIC'] else 'None'} \n"
@@ -336,6 +379,73 @@ def df_report_formatting(panel, vcf_df):
     ]]
 
     return vcf_df
+
+
+def to_report_formatting(col_names):
+    """
+    Build df of required placeholder text for the to report sheet
+
+    Args: col_names (list): list of column names from a panel df
+
+    Returns: report_df (df): formatted dataframe wth placeholder text as report
+        template in specific cells
+    """
+    # add the column names for when they paste in reported variants
+    report_df = pd.DataFrame(columns=col_names).astype('object')
+
+    # add 12 empty rows as padding for visualise niceness
+    report_df = report_df.append(
+        [pd.Series([np.nan])] * 12).reindex(col_names, axis=1)
+
+    col1_labels = [
+        "Run QC", "250x", "Contamination", "Total reads M", "Fold 80",
+        "Insert Size",
+    ]
+
+
+    for label in col1_labels:
+        # set each of the col1 labels as a field in first column
+        report_df = report_df.append(
+            {report_df.columns[0]: label}, ignore_index=True
+        )
+
+    report_df.at[12, report_df.columns[3]] = "Sample QC"
+
+    col6_labels = ["Analysed by", "Date", "Subpanel analysed"]
+    col6_label_idx = 8
+
+    for label in col6_labels:
+        # start at row 8, add each of col6 labels as field in column 6
+        report_df.at[col6_label_idx, report_df.columns[5]] = label
+        col6_label_idx += 1
+
+    return report_df
+
+
+def set_column_widths(worksheet, df):
+    """
+    Sets column widths dyanmically based on cell content
+
+    Args:
+        - worksheet (xlsxwriter sheet object): sheet to modify
+        - df (pd.DataFrame): dataframe for sheet to set widths from
+    Returns:
+        - - worksheet (xlsxwriter sheet object): xlsx sheet with new widths
+    """
+    for idx, col in enumerate(df):
+        # specific formatting for columns with potential very long text
+        if "ClinVar" in col:
+            max_len = 15
+        elif "Report_text" in col:
+            max_len = 40
+        else:
+            series = df[col]
+            max_len = max((
+                series.astype(str).map(len).max(), len(str(series.name))
+            )) + 2
+        worksheet.set_column(idx, idx, max_len)  # set column width
+
+    return worksheet
 
 
 def write_bsvi_vcf(fname, bsvi_df, bsvi_vcf_header):
@@ -399,16 +509,37 @@ def write_xlsx(fname, vcfs_dict):
     writer = pd.ExcelWriter(excel_fname, engine="xlsxwriter")
     workbook = writer.book
 
+    # get the column names of a df to write to report sheet
+    header = vcfs_dict[next(iter(vcfs_dict))].columns
+    report_df = to_report_formatting(col_names=header)
+    report_df.to_excel(writer, sheet_name='to report', index=False)
+
+    worksheet = writer.sheets['to report']
+
+    # set specific cells to be bold in to report tab
+    for cell in ['A14:A14', 'D14:D14', 'F10:F12']:
+        header_format = workbook.add_format({'bold': True})
+        worksheet.conditional_format(
+            cell, {'type': 'no_errors', 'format': header_format}
+        )
+
+    # set dynamic column widths on cell content
+    worksheet = set_column_widths(worksheet, report_df)
+    worksheet.set_row(0, 12)
+
     for panel_name, vcf_df in vcfs_dict.items():
         # loop over panel dfs, write to sheet & apply formatting
-        vcf_df.to_excel(writer, sheet_name=panel_name)
+        vcf_df.to_excel(writer, sheet_name=panel_name, index=False)
         # fun excel formatting
         worksheet = writer.sheets[panel_name]
         wrap_format = workbook.add_format({'text_wrap': True})
         worksheet.set_column(1, 21, 15)
         worksheet.set_column(22, 22, 70, wrap_format)
         worksheet.set_default_row(100)
-        worksheet.set_row(0, 15)
+        worksheet.set_row(0, 12)
+
+        # set dynamic column widths on cell content
+        worksheet = set_column_widths(worksheet, vcf_df)
 
     writer.save()
 
@@ -444,12 +575,19 @@ if __name__ == "__main__":
     # apply formatting to allgenes vcf df for tsv file
     all_genes_df = df_report_formatting(fname, all_genes_df)
 
+    formatted_dfs = {}
+
     # apply formatting to each panel df for xlsx file
     for panel, vcf_df in vcfs_dict.items():
         if not vcf_df.empty:
             vcf_df = df_report_formatting(panel, vcf_df)
-            vcfs_dict[panel] = vcf_df
+            formatted_dfs[panel] = vcf_df
+        if panel == 'myeloid':
+            # filtering myeloid panel for common variants
+            vcf_df, filter_vcf_df = filter_common(vcf_df)
+            formatted_dfs['myeloid'] = vcf_df
+            formatted_dfs['myeloid_filtered'] = filter_vcf_df
 
     write_bsvi_vcf(fname, bsvi_vcf_df, all_genes_df_header)
     write_tsv(fname, all_genes_df)
-    write_xlsx(fname, vcfs_dict)
+    write_xlsx(fname, formatted_dfs)
