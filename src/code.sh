@@ -109,7 +109,7 @@ main() {
 
 	time bedtools intersect -header -a "${mutect2_vcf_path}" -b "${mutect2_bed_path}" \
 	| bcftools view -i "FORMAT/AF[*]>0.03" - \
-	| bcftools view -i "FORMAT/DP>99" - \
+	| bcftools view -i "DP>99" - \
 	| sed 's/AD,Number=./AD,Number=R/g' \
 	| sed 's/RPA,Number=./RPA,Number=R/g' \
 	| bcftools norm -f "${mutect2_fasta_path}" -m -any --keep-sum AD - \
