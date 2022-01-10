@@ -243,6 +243,18 @@
   ],
   "outputSpec": [
     {
+      "name": "mutect2_opencga_vcf",
+      "label": "header modified mutect2 VCF",
+      "help": "mutect2 vcf with added sample tag for uploading to openCGA",
+      "class": "file"
+    },
+    {
+      "name": "cgppindel_opencga_vcf",
+      "label": "header modified cgppindel VCF",
+      "help": "cgppindel vcf with added sample tag for uploading to openCGA",
+      "class": "file"
+    },
+    {
       "name": "pindel_vep_vcf",
       "label": "Annotated cgppindel VCF",
       "help": "VCF that has been previously filtered and now annotated with VEP",
