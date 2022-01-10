@@ -45,6 +45,7 @@
 - Excel workbook of annotated variants
 - BSVI-friendly VCF
 - Intermediate VCFs
+- header modified VCFs for uploading to openCGA
 
 ## How does this app work?
 - Filters mutect2 VCF with bedtools:
