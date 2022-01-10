@@ -139,14 +139,11 @@ main() {
 	bcftools reheader -h mutect2.header "$splitfile" > "${mutect2_vcf_prefix}.opencga.vcf.gz"
 
 	# add sample id to cgppindel vcf on line before other ##SAMPLE lines
-	# pindel vcf contains 2 SAMPLE entries already
-	# ##SAMPLE=<ID=NORMAL,...
-	# ##SAMPLE=<ID=TUMOUR,...
-	# therefore we will also rename these so there is only one ##SAMPLE for opencga to pick up
+	# pindel vcf contains 2 SAMPLE entries already, therefore we will also
+	# rename these so there is only one ##SAMPLE for opencga to pick up
 	zgrep "^#" "$pindel_filtered_vcf" \
 		| sed s"/^##SAMPLE=<ID=NORMAL/##SAMPLE=${sample_id}\n&/" \
 		| sed s"/##SAMPLE=<ID/##SAMPLE_CGPPINDEL=<ID/g" > pindel.header
-top is mutect2, bottom 
 
 	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf.gz"
 
