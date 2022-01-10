@@ -149,12 +149,9 @@ main() {
 
 	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf.gz"
 
-	zgrep '^#' "${mutect2_vcf_prefix}.opencga.vcf.gz"
-	zgrep '^#' "${pindel_vcf_prefix}.opencga.vcf.gz"
 
 	mark-section "annotating and further filtering"
-
-	# vep needs permissions to write to /home/dnanexus
+	# permissions to write to /home/dnanexus
 	chmod a+rwx /home/dnanexus
 
 	# extract vep reference annotation tarball to /home/dnanexus
