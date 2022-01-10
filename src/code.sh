@@ -144,7 +144,7 @@ main() {
 	# ##SAMPLE=<ID=TUMOUR,...
 	# therefore we will also rename these so there is only one ##SAMPLE for opencga to pick up
 	zgrep "^#" "$pindel_filtered_vcf" \
-		| sed s"/^##SAMPLE=</##SAMPLE=${sample_id}\n&/" \
+		| sed s"/^##SAMPLE=<ID=NORMAL/##SAMPLE=${sample_id}\n&/" \
 		| sed s"/##SAMPLE=<ID/##SAMPLE_CGPPINDEL=<ID/g" > pindel.header
 
 	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf.gz"
