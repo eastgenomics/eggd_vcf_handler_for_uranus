@@ -129,9 +129,27 @@ main() {
 	bcftools view -i 'INFO/LEN > 2' "${pindel_vcf_prefix}.tmp.vcf" > $pindel_filtered_vcf
 
 
-	mark-section "annotating and further filtering"
+	# add tags required for openCGA
+	# write these to separate filtered but unannotated VCFs for uploading
+	mark-section "Adding SAMPLE tags to VCF headers"
+	sample_id=$(echo $mutect2_vcf_name | cut -d'-' -f2)  # the id to add to the vcfs
 
-	# vep needs permissions to write to /home/dnanexus
+	# add sample id to mutect2 vcf on line before ##tumour_sample in header
+	zgrep "^#" "$splitfile" | sed s"/^##tumor_sample/##SAMPLE=${sample_id}\n&/" > mutect2.header
+	bcftools reheader -h mutect2.header "$splitfile" > "${mutect2_vcf_prefix}.opencga.vcf.gz"
+
+	# add sample id to cgppindel vcf on line before other ##SAMPLE lines
+	# pindel vcf contains 2 SAMPLE entries already, therefore we will also
+	# rename these so there is only one ##SAMPLE for opencga to pick up
+	zgrep "^#" "$pindel_filtered_vcf" \
+		| sed s"/^##SAMPLE=<ID=NORMAL/##SAMPLE=${sample_id}\n&/" \
+		| sed s"/##SAMPLE=<ID/##SAMPLE_CGPPINDEL=<ID/g" > pindel.header
+
+	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf.gz"
+
+
+	mark-section "annotating and further filtering"
+	# permissions to write to /home/dnanexus
 	chmod a+rwx /home/dnanexus
 
 	# extract vep reference annotation tarball to /home/dnanexus
@@ -254,7 +272,8 @@ main() {
 	mark-section "uploading output"
 
 	# make required output directories and move files
-	mkdir -p ~/out/allgenes_filtered_vcf ~/out/lymphoid_filtered_vcf/ ~/out/myeloid_filtered_vcf/\
+	mkdir -p ~/out/mutect2_opencga_vcf ~/out/cgppindel_opencga_vcf\
+		~/out/allgenes_filtered_vcf ~/out/lymphoid_filtered_vcf/ ~/out/myeloid_filtered_vcf/\
 		~/out/cll_filtered_vcf ~/out/tp53_filtered_vcf ~/out/lgl_filtered_vcf ~/out/hcl_filtered_vcf\
 		~/out/lpl_filtered_vcf ~/out/bsvi_vcf ~/out/text_report ~/out/excel_report ~/out/pindel_vep_vcf
 
@@ -262,6 +281,8 @@ main() {
 	variantlist="${mutect2_vcf_prefix}_allgenes.tsv"
 	excellist="${mutect2_vcf_prefix}_panels.xlsx"
 
+	mv ~/"${mutect2_vcf_prefix}.opencga.vcf.gz" ~/out/mutect2_opencga_vcf/
+	mv ~/"${pindel_vcf_prefix}.opencga.vcf.gz" ~/out/cgppindel_opencga_vcf/
 	mv ~/"${pindelvepfile}" ~/out/pindel_vep_vcf/
 	mv ~/"${allgenesvepfile}" ~/out/allgenes_filtered_vcf/
 	mv ~/"${lymphoidvepfile}" ~/out/lymphoid_filtered_vcf/
