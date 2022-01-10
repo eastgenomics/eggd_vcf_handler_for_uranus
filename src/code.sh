@@ -93,7 +93,7 @@ main() {
 	find ~/in/vep_refs -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_refs
 	find ~/in/vep_annotation -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_annotation
 
-	# move annotation sources to home09513312914
+	# move annotation sources to home
 	mv ~/in/vep_annotation/* /home/dnanexus/
 
 	mark-section "filtering mutect2 VCF"
@@ -146,6 +146,7 @@ main() {
 	zgrep "^#" "$pindel_filtered_vcf" \
 		| sed s"/^##SAMPLE=<ID=NORMAL/##SAMPLE=${sample_id}\n&/" \
 		| sed s"/##SAMPLE=<ID/##SAMPLE_CGPPINDEL=<ID/g" > pindel.header
+top is mutect2, bottom 
 
 	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf.gz"
 
