@@ -37,6 +37,7 @@ def parse_args():
     Parse command line args
 
     Args: None
+
     Returns:
         - args (Namespace): object containing parsed arguments.
     """
