@@ -34,9 +34,7 @@ import pandas as pd
 
 def parse_args():
     """
-    Parse command line args
-
-    Args: None
+    Parse command line args with standard argparse
 
     Returns:
         - args (Namespace): object containing parsed arguments.
@@ -591,3 +589,9 @@ if __name__ == "__main__":
     write_bsvi_vcf(fname, bsvi_vcf_df, all_genes_df_header)
     write_tsv(fname, all_genes_df)
     write_xlsx(fname, formatted_dfs)
+
+
+out = (
+    f"There are no CNVs in the regions listed in {panel_name} \n"
+    f"in sample {sample_name}"
+)

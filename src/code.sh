@@ -135,17 +135,23 @@ main() {
 	sample_id=$(echo $mutect2_vcf_name | cut -d'-' -f2)  # the id to add to the vcfs
 
 	# add sample id to mutect2 vcf on line before ##tumour_sample in header
-	zgrep "^#" "$splitfile" | sed s"/^##tumor_sample/##SAMPLE=${sample_id}\n&/" > mutect2.header
+	# no SAMPLE line already present so create one from full name and ID we want
+	mutect2_column_name=$(grep "#CHROM" "$splitfile" | cut -f10)
+	sample_field="##SAMPLE=<ID=${mutect2_column_name},SampleName=${sample_id}>"
+
+	zgrep "^#" "$splitfile" | sed s"/^##tumor_sample/${sample_field}\n&/" > mutect2.header
 	bcftools reheader -h mutect2.header "$splitfile" > "${mutect2_vcf_prefix}.opencga.vcf"
 
-	# add sample id to cgppindel vcf on line before other ##SAMPLE lines
-	# pindel vcf contains 2 SAMPLE entries already, therefore we will also
-	# rename these so there is only one ##SAMPLE for opencga to pick up
-	zgrep "^#" "$pindel_filtered_vcf" \
-		| sed s"/^##SAMPLE=<ID=NORMAL/##SAMPLE=${sample_id}\n&/" \
-		| sed s"/##SAMPLE=<ID/##SAMPLE_CGPPINDEL=<ID/g" > pindel.header
+	zgrep "^#" "${mutect2_vcf_prefix}.opencga.vcf"
 
-	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf"
+	# modify SampleName for tumour sample line to correctly link to our sample ID
+	tumour_sample=$(grep "##SAMPLE=<ID=TUMOUR" "$pindel_filtered_vcf")
+	header_line=$(sed s"/SampleName=[A-Za-z0-9\_\-]*/SampleName=${sample_id}/" <<< $tumour_sample)
+
+	zgrep "^#" "$pindel_filtered_vcf" \
+		| sed s"/^##SAMPLE=<ID=TUMOUR.*/${header_line}/" > pindel.header
+
+	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf.gz"
 
 
 	mark-section "annotating and further filtering"
@@ -281,8 +287,8 @@ main() {
 	variantlist="${mutect2_vcf_prefix}_allgenes.tsv"
 	excellist="${mutect2_vcf_prefix}_panels.xlsx"
 
-	mv ~/"${mutect2_vcf_prefix}.opencga.vcf" ~/out/mutect2_opencga_vcf/
-	mv ~/"${pindel_vcf_prefix}.opencga.vcf" ~/out/cgppindel_opencga_vcf/
+	mv ~/"${mutect2_vcf_prefix}.opencga.vcf.gz" ~/out/mutect2_opencga_vcf/
+	mv ~/"${pindel_vcf_prefix}.opencga.vcf.gz" ~/out/cgppindel_opencga_vcf/
 	mv ~/"${pindelvepfile}" ~/out/pindel_vep_vcf/
 	mv ~/"${allgenesvepfile}" ~/out/allgenes_filtered_vcf/
 	mv ~/"${lymphoidvepfile}" ~/out/lymphoid_filtered_vcf/
