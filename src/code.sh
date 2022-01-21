@@ -142,6 +142,7 @@ main() {
 	zgrep "^#" "$splitfile" | sed s"/^##tumor_sample/${sample_field}\n&/" > mutect2.header
 	bcftools reheader -h mutect2.header "$splitfile" > "${mutect2_vcf_prefix}.opencga.vcf"
 
+	# sense check in logs it looks correct
 	zgrep "^#" "${mutect2_vcf_prefix}.opencga.vcf"
 
 	# modify SampleName for tumour sample line to correctly link to our sample ID
@@ -151,8 +152,10 @@ main() {
 	zgrep "^#" "$pindel_filtered_vcf" \
 		| sed s"/^##SAMPLE=<ID=TUMOUR.*/${header_line}/" > pindel.header
 
-	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf.gz"
+	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf"
 
+	# sense check in logs it looks correct
+	zgrep '^#' "${pindel_vcf_prefix}.opencga.vcf"
 
 	mark-section "annotating and further filtering"
 	# permissions to write to /home/dnanexus
@@ -287,8 +290,8 @@ main() {
 	variantlist="${mutect2_vcf_prefix}_allgenes.tsv"
 	excellist="${mutect2_vcf_prefix}_panels.xlsx"
 
-	mv ~/"${mutect2_vcf_prefix}.opencga.vcf.gz" ~/out/mutect2_opencga_vcf/
-	mv ~/"${pindel_vcf_prefix}.opencga.vcf.gz" ~/out/cgppindel_opencga_vcf/
+	mv ~/"${mutect2_vcf_prefix}.opencga.vcf" ~/out/mutect2_opencga_vcf/
+	mv ~/"${pindel_vcf_prefix}.opencga.vcf" ~/out/cgppindel_opencga_vcf/
 	mv ~/"${pindelvepfile}" ~/out/pindel_vep_vcf/
 	mv ~/"${allgenesvepfile}" ~/out/allgenes_filtered_vcf/
 	mv ~/"${lymphoidvepfile}" ~/out/lymphoid_filtered_vcf/
