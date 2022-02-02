@@ -246,7 +246,7 @@ def df_report_formatting(panel, vcf_df):
     # first get total number of samples across all, should return single value
     uniq_prev_ns = list(set(filter(None, vcf_df['Prev_NS'])))
 
-    assert len(uniq_prev_ns) > 1, \
+    assert len(uniq_prev_ns) <= 1, \
         f"Differing total previous samples identified: {uniq_prev_ns}"
 
     uniq_prev_ns = uniq_prev_ns[0]
