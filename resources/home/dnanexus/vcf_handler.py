@@ -246,15 +246,18 @@ def df_report_formatting(panel, vcf_df):
     # first get total number of samples across all, should return single value
     uniq_prev_ns = list(set(filter(None, vcf_df['Prev_NS'])))
 
-    assert len(uniq_prev_ns) == 1, \
+    assert len(uniq_prev_ns) <= 1, \
         f"Differing total previous samples identified: {uniq_prev_ns}"
 
-    uniq_prev_ns = uniq_prev_ns[0]
+    # handle cases where vcf has very few variants and all haven't been seen
+    # previously => no prev_ns values => empty list, set to empty string
+    uniq_prev_ns = next(iter(uniq_prev_ns), '')
 
     # those not previously seen will have empty string, fill appropriately to
     # display as 0/{total}
     vcf_df['Prev_AC'] = vcf_df['Prev_AC'].apply(
         lambda x: str(0) if x == "" else x)
+
     vcf_df['Prev_NS'] = vcf_df['Prev_NS'].apply(
         lambda x: uniq_prev_ns if x == "" else x)
 
