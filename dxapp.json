@@ -317,6 +317,20 @@
       "patterns": ["*LPLvep.vcf"]
     },
     {
+      "name": "t_nhl_filtered_vcf",
+      "label": "Filtered and annotated VCF for T-NHL panel genes",
+      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
+      "class": "file",
+      "patterns": ["*t_nhlvep.vcf"]
+    },
+    {
+      "name": "plasma_cell_myeloma_filtered_vcf",
+      "label": "Filtered and annotated VCF for plasma cell myeloma panel genes",
+      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
+      "class": "file",
+      "patterns": ["*plasma_cell_myelomavep.vcf"]
+    },
+    {
       "name": "bsvi_vcf",
       "label": "modified vcf for bsvi",
       "help": "invalid vcf for bsvi workaround",
