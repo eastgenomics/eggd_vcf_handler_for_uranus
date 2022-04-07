@@ -245,7 +245,7 @@ main() {
 
 	# filter with VEP for Plasma Cell Myeloma
 	plasma_cell_myeloma_transcripts="NM_004333.,NM_014953.,NM_017709.,NM_002460.,NM_033360.,NM_002524.,\
-	NM_000546.,NM_003334."
+	NM_000546."
 	plasma_cell_myelomavepfile="${mutect2_vcf_prefix}_plasma_cell_myelomavep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$plasma_cell_myelomavepfile" "$plasma_cell_myeloma_transcripts"
