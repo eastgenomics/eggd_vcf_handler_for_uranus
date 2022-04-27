@@ -196,6 +196,10 @@ main() {
 	splitvepfile="${mutect2_vcf_prefix}_split_filevep.vcf"
 	annotate_vep_vcf "$splitfile" "$splitvepfile"
 
+	# split VCF annotation to separate records where more than one transcript of annotation is present
+	bcftools +split-vep -d -c - -a CSQ "$splitvepfile" -o tmp.vcf
+	rm "$splitvepfile" && mv tmp.vcf "$splitvepfile"
+
 
 	# filter mutect2 vcf with each set of panel transcripts
 
@@ -274,6 +278,7 @@ main() {
 	lplvepfile=${mutect2_vcf_prefix}_LPLvep.vcf
 
 	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468\.,NM_003467\."
+
 
 	# annotate pindel vcf with VEP
 	pindel_annotated="${pindel_vcf_prefix}_annotated.vcf"
