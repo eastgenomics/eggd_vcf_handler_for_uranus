@@ -284,6 +284,10 @@ main() {
 	pindel_annotated="${pindel_vcf_prefix}_annotated.vcf"
 	annotate_vep_vcf "$pindel_filtered_vcf" "$pindel_annotated"
 
+	# split VCF annotation to separate records where more than one transcript of annotation is present
+	bcftools +split-vep -d -c - -a CSQ "$pindel_annotated" -o tmp2.vcf
+	rm "$pindel_annotated" && mv tmp2.vcf "$pindel_annotated"
+
 	# filter pindel vcf by transcripts
 	pindel_transcripts="NM_004119\.,NM_004343\.,NM_004364\."
 	pindelvepfile="${pindel_vcf_prefix}_vep.vcf"
