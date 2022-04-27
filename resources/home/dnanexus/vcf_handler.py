@@ -291,8 +291,6 @@ def df_report_formatting(panel, vcf_df):
     Returns:
         - vcf_df (df): df of variants with fun formatting
     """
-    print(vcf_df)
-
     # split out fields from INFO column to separate columns
     vcf_df = split_info(vcf_df=vcf_df)
 
@@ -367,16 +365,15 @@ def df_report_formatting(panel, vcf_df):
 
         vcf_df.insert(16, 'Mutect2_AF%', af_values)
 
+        vcf_df.rename(columns={'DP': 'Read_Depth'}, inplace=True)
+
+
     # cosmic annotation returns duplicates for each record in cosmic vcf
     # turn to set to be unique, join in case there is more than one
     vcf_df['COSMIC'] = vcf_df['COSMIC'].apply(
         lambda x: (','.join(set(x.split('&')))) if x else x
     )
 
-    # waiting to hear if the haemonc team want hgmd or not
-    # vcf_df['HGMD'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
-    #     lambda x: ','.join((y for y in x if y.startswith('CM', 'CD')))
-    # )
     vcf_df['dbSNP'] = vcf_df['Existing_variation'].str.split(r'\&|\||,').apply(
         lambda x: ','.join((y for y in x if y.startswith('rs')))
     )
@@ -426,13 +423,10 @@ def df_report_formatting(panel, vcf_df):
     # select and re-order df columns
     vcf_df = vcf_df[[
         'samplename', 'CHROM', 'POS', 'SYMBOL', 'Transcript_ID', 'EXON', 'HGVSc',
-        'HGVSp', 'Protein_ID', 'Consequence', 'DP', f'{caller}_AF%',
+        'HGVSp', 'Protein_ID', 'Consequence', 'Read_Depth', f'{caller}_AF%',
         'FILTER', 'ClinVar', 'ClinVar_CLNSIG', 'ClinVar_CLNDN', 'COSMIC',
         'dbSNP', 'gnomAD_AF', 'CADD_PHRED', 'Prev_Count', 'Report_text'
     ]]
-
-    print(vcf_df)
-    sys.exit()
 
     return vcf_df
 
@@ -560,6 +554,8 @@ def write_xlsx(fname, vcfs_dict):
     Outputs: .xlsx file of panel vcfs in separate tabs
     """
     excel_fname = fname.replace('allgenesvep.vcf', 'panels.xlsx')
+
+    print(f"Writing xlsx file to: {excel_fname}")
 
     # write excel
     writer = pd.ExcelWriter(excel_fname, engine="xlsxwriter")
