@@ -464,7 +464,7 @@
     "network": [
       "*"
     ],
-    "project": "VIEW"
+    "project": "UPLOAD"
   },
   "ignoreReuse": true
 }
