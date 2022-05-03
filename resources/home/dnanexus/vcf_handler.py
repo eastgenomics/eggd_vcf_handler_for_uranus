@@ -185,9 +185,9 @@ def filter_common(vcf_df):
         vcf_df['Prev_Count'].apply(
             lambda x: (int(x.split("/")[0]) / int(x.split("/")[1])) > 0.5
         ) | (
-            vcf_df['CONSEQ'] == 'synonymous_variant'
+            vcf_df['Consequence'] == 'synonymous_variant'
         )) & (
-            np.logical_not(vcf_df['GENE'].isin(['TP53', 'GATA2']))
+            np.logical_not(vcf_df['SYMBOL'].isin(['TP53', 'GATA2']))
     ))
 
     # filter df by indixes of filter conditions
@@ -292,10 +292,23 @@ def df_report_formatting(panel, vcf_df):
         - vcf_df (df): df of variants with fun formatting
     """
     # split out fields from INFO column to separate columns
-    vcf_df = split_info(vcf_df=vcf_df)
+    if not vcf_df.empty:
+        vcf_df = split_info(vcf_df=vcf_df)
+    else:
+        # empty df from vcf with no variants => won't have correct columns from
+        # splitting, add these as empty columns to the df to not break downstream
+        vcf_df[[
+            'SYMBOL', 'Transcript_ID', 'EXON', 'HGVSc', 'HGVSp', 'Protein_ID',
+            'Consequence', 'Read_Depth', 'FILTER', 'ClinVar', 'ClinVar_CLNSIG',
+            'ClinVar_CLNDN', 'COSMIC', 'dbSNP', 'gnomAD_AF', 'CADD_PHRED',
+            'Prev_Count', 'Report_text'
+        ]] = pd.NA
 
-    # first get total number of samples across all, should return single value
-    uniq_prev_ns = list(set(filter(None, vcf_df['Prev_NS'])))[0]
+    # first get total number of samples across all variants, reverse sort where
+    # a not previously seen before variant is present and Prev_NS = '.' so the
+    # sample no is first
+    uniq_prev_ns = sorted(
+        list(set(filter(None, vcf_df['Prev_NS']))), reverse=True)
 
     # handle cases where vcf has very few variants and all haven't been seen
     # previously => no prev_ns values => empty list, set to empty string
@@ -304,10 +317,10 @@ def df_report_formatting(panel, vcf_df):
     # those not previously seen will have empty string, fill appropriately to
     # display as 0/{total}
     vcf_df['Prev_AC'] = vcf_df['Prev_AC'].apply(
-        lambda x: str(0) if x == "." else x)
+        lambda x: str(0) if x == "." or x == "" else x)
 
     vcf_df['Prev_NS'] = vcf_df['Prev_NS'].apply(
-        lambda x: uniq_prev_ns if x == "" else x)
+        lambda x: uniq_prev_ns if x == "." or x == "" else x)
 
     vcf_df['Prev_Count'] = vcf_df['Prev_AC'] + '/' + vcf_df['Prev_NS']
 
