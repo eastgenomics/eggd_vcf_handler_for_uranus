@@ -304,6 +304,17 @@ def df_report_formatting(panel, vcf_df):
             'Prev_Count', 'Report_text'
         ]] = pd.NA
 
+        # set order
+        vcf_df = vcf_df[[
+            'samplename', 'CHROM', 'POS', 'SYMBOL', 'Transcript_ID', 'EXON',
+            'HGVSc', 'HGVSp', 'Protein_ID', 'Consequence', 'Read_Depth',
+            f'{caller}_AF%', 'FILTER', 'ClinVar', 'ClinVar_CLNSIG',
+            'ClinVar_CLNDN', 'COSMIC', 'dbSNP', 'gnomAD_AF', 'CADD_PHRED',
+            'Prev_Count', 'Report_text'
+        ]]
+
+        return vcf_df
+
     # first get total number of samples across all variants, reverse sort where
     # a not previously seen before variant is present and Prev_NS = '.' so the
     # sample no is first
@@ -392,7 +403,9 @@ def df_report_formatting(panel, vcf_df):
     )
 
     # Include word exon in exon field to overcome excel
-    vcf_df['EXON'] = vcf_df['EXON'].apply(lambda x: 'exon ' + x if x else None)
+    vcf_df['EXON'] = vcf_df['EXON'].apply(
+        lambda x: 'exon ' + x if x and x != "." else None
+    )
 
     # scientists are picky and want NM_ and NP_ changing in HGVS
     vcf_df['Transcript_ID'] = vcf_df['HGVSc'].str.split(':').apply(
@@ -644,9 +657,9 @@ if __name__ == "__main__":
 
     # apply formatting to each panel df for xlsx file
     for panel, vcf_df in vcfs_dict.items():
-        if not vcf_df.empty:
-            vcf_df = df_report_formatting(panel, vcf_df)
-            formatted_dfs[panel] = vcf_df
+        vcf_df = df_report_formatting(panel, vcf_df)
+        formatted_dfs[panel] = vcf_df
+
         if panel == 'myeloid':
             # filtering myeloid panel for common variants
             vcf_df, filter_vcf_df = filter_common(vcf_df)
