@@ -301,14 +301,14 @@ def df_report_formatting(panel, vcf_df):
             'SYMBOL', 'Transcript_ID', 'EXON', 'HGVSc', 'HGVSp', 'Protein_ID',
             'Consequence', 'Read_Depth', 'FILTER', 'ClinVar', 'ClinVar_CLNSIG',
             'ClinVar_CLNDN', 'COSMIC', 'dbSNP', 'gnomAD_AF', 'CADD_PHRED',
-            'Prev_Count', 'Report_text'
+            'AF%', 'Prev_Count', 'Report_text'
         ]] = pd.NA
 
         # set order
         vcf_df = vcf_df[[
             'samplename', 'CHROM', 'POS', 'SYMBOL', 'Transcript_ID', 'EXON',
             'HGVSc', 'HGVSp', 'Protein_ID', 'Consequence', 'Read_Depth',
-            f'{caller}_AF%', 'FILTER', 'ClinVar', 'ClinVar_CLNSIG',
+            'AF%', 'FILTER', 'ClinVar', 'ClinVar_CLNSIG',
             'ClinVar_CLNDN', 'COSMIC', 'dbSNP', 'gnomAD_AF', 'CADD_PHRED',
             'Prev_Count', 'Report_text'
         ]]
