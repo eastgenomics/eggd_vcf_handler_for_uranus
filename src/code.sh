@@ -331,8 +331,8 @@ main() {
 	mv ~/"${lglvepfile}" ~/out/lgl_filtered_vcf/
 	mv ~/"${hclvepfile}" ~/out/hcl_filtered_vcf/
 	mv ~/"${lplvepfile}" ~/out/lpl_filtered_vcf/
-	mv ~/"${t_nhlvepfile}" ~/out/t_nhl_filtered_vcf
-	mv ~/"${plasma_cell_myelomavepfile}" ~/out/plasma_cell_myeloma_filtered_vcf
+	mv ~/"${t_nhlvepfile}" ~/out/t_nhl_filtered_vcf/
+	mv ~/"${plasma_cell_myelomavepfile}" ~/out/plasma_cell_myeloma_filtered_vcf/
 	mv ~/"${bsvivcf}" ~/out/bsvi_vcf/
 	mv ~/"${variantlist}" ~/out/text_report/
 	mv ~/"${excellist}" ~/out/excel_report/
