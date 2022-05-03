@@ -298,10 +298,10 @@ def df_report_formatting(panel, vcf_df):
         # empty df from vcf with no variants => won't have correct columns from
         # splitting, add these as empty columns to the df to not break downstream
         vcf_df[[
-            'SYMBOL', 'Transcript_ID', 'EXON', 'HGVSc', 'HGVSp', 'Protein_ID',
-            'Consequence', 'Read_Depth', 'FILTER', 'ClinVar', 'ClinVar_CLNSIG',
-            'ClinVar_CLNDN', 'COSMIC', 'dbSNP', 'gnomAD_AF', 'CADD_PHRED',
-            'AF%', 'Prev_Count', 'Report_text'
+            'samplename', 'SYMBOL', 'Transcript_ID', 'EXON', 'HGVSc', 'HGVSp',
+            'Protein_ID', 'Consequence', 'Read_Depth', 'FILTER', 'ClinVar',
+            'ClinVar_CLNSIG', 'ClinVar_CLNDN', 'COSMIC', 'dbSNP', 'gnomAD_AF',
+            'CADD_PHRED', 'AF%', 'Prev_Count', 'Report_text'
         ]] = pd.NA
 
         # set order
