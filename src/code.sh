@@ -78,6 +78,17 @@ function filter_vep_vcf {
 	"(gnomAD_AF < 0.10 or not gnomAD_AF) and $transcript_list"
 }
 
+function split_vep {
+	# split VCF annotation to separate records where more than one transcript of annotation is present
+
+	# Inputs:
+	#	$1 -> vcf to split
+	local vcf=$1
+
+	bcftools +split-vep -d -c - -a CSQ "$vcf" | bcftools annotate -x INFO/CSQ -o tmp.vcf
+	rm "$vcf" && mv tmp.vcf "$vcf"  # overwrite input vcf with split vcf
+}
+
 main() {
 	set -e -x -v -o pipefail
 
@@ -199,8 +210,8 @@ main() {
 	annotate_vep_vcf "$splitfile" "$splitvepfile"
 
 	# split VCF annotation to separate records where more than one transcript of annotation is present
-	bcftools +split-vep -d -c - -a CSQ "$splitvepfile" -o tmp.vcf
-	rm "$splitvepfile" && mv tmp.vcf "$splitvepfile"
+	# bcftools +split-vep -d -c - -a CSQ "$splitvepfile" -o tmp.vcf
+	# rm "$splitvepfile" && mv tmp.vcf "$splitvepfile"
 
 
 	# filter mutect2 vcf with each set of panel transcripts
@@ -209,6 +220,7 @@ main() {
 	allgenesvepfile="${mutect2_vcf_prefix}_allgenesvep.vcf"
 
 	filter_vep_vcf "$splitvepfile" "$allgenesvepfile" "$all_genes_transcripts"
+	split_vep "$allgenesvepfile"
 
 
 	# filter with VEP for lymphoid genes list
@@ -219,6 +231,7 @@ main() {
 	lymphoidvepfile="${mutect2_vcf_prefix}_pan-lymphoidvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$lymphoidvepfile" "$lymphoid_transcripts"
+	split_vep "$lymphoidvepfile"
 
 	# filter with VEP for myeloid genes list
 	myeloid_transcripts="NM_015338.,NM_001123385.,NM_001379451.,NM_004333.,NM_004343.,NM_005188.,\
@@ -232,6 +245,7 @@ main() {
 	myeloidvepfile="${mutect2_vcf_prefix}_myeloidvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$myeloidvepfile" "$myeloid_transcripts"
+	split_vep "$myeloidvepfile"
 
 
 	# filter with VEP for CLL_Extended genes list
@@ -240,27 +254,31 @@ main() {
 	cllvepfile="${mutect2_vcf_prefix}_CLL-extendedvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$cllvepfile" "$cll_transcripts"
+	split_vep "$cllvepfile"
 
 
 	# filter with VEP for T-NHL
 	t_nhl_transcripts="NM_022552.,NM_002168.,NM_001664.,NM_001127208."
-	t_nhlvepfile="${mutect2_vcf_prefix}_t_nhlvep.vcf"
+	t_nhlvepfile="${mutect2_vcf_prefix}_T-NHLvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$t_nhlvepfile" "$t_nhl_transcripts"
+	split_vep "$t_nhlvepfile"
 
 
 	# filter with VEP for Plasma Cell Myeloma
 	plasma_cell_myeloma_transcripts="NM_004333.,NM_014953.,NM_017709.,NM_002460.,NM_004985.,NM_002524.,\
 	NM_000546."
-	plasma_cell_myelomavepfile="${mutect2_vcf_prefix}_plasma_cell_myelomavep.vcf"
+	plasma_cell_myelomavepfile="${mutect2_vcf_prefix}_plasma-cell-myelomavep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$plasma_cell_myelomavepfile" "$plasma_cell_myeloma_transcripts"
+	split_vep "$plasma_cell_myelomavepfile"
 
 
 	# filter with VEP for TP53
 	tp53vepfile="${mutect2_vcf_prefix}_TP53vep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$tp53vepfile" "NM_000546."
+	split_vep "$tp53vepfile"
 
 
 	# filter with VEP for LGL
@@ -268,33 +286,34 @@ main() {
 	lglvepfile="${mutect2_vcf_prefix}_LGLvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$lglvepfile" "$lgl_transcripts"
+	split_vep "$lglvepfile"
 
 
 	# run vep for HCL
 	hclvepfile="${mutect2_vcf_prefix}_HCLvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$hclvepfile" "NM_004333.,NM_002755."
+	split_vep "$hclvepfile"
 
 
 	# run vep for LPL
 	lplvepfile=${mutect2_vcf_prefix}_LPLvep.vcf
 
 	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468.,NM_003467."
+	split_vep "$lplvepfile"
 
 
 	# annotate pindel vcf with VEP
 	pindel_annotated="${pindel_vcf_prefix}_annotated.vcf"
 	annotate_vep_vcf "$pindel_filtered_vcf" "$pindel_annotated"
 
-	# split VCF annotation to separate records where more than one transcript of annotation is present
-	bcftools +split-vep -d -c - -a CSQ "$pindel_annotated" -o tmp2.vcf
-	rm "$pindel_annotated" && mv tmp2.vcf "$pindel_annotated"
-
 	# filter pindel vcf by transcripts
 	pindel_transcripts="NM_004119.,NM_004343.,NM_004364."
 	pindelvepfile="${pindel_vcf_prefix}_vep.vcf"
 
 	filter_vep_vcf "$pindel_annotated" "$pindelvepfile" "$pindel_transcripts"
+	split_vep "$pindelvepfile"
+
 
 	mark-section "BSVI workaround (overwriting GT) and creating variant list"
 
@@ -305,7 +324,8 @@ main() {
 	# note that order of VCFs passed to -v determines order of sheets in excel
 	time python3 vcf_handler.py -a "${allgenesvepfile}" \
 	-v "${myeloidvepfile}" "${cllvepfile}" "${tp53vepfile}" "${lglvepfile}" \
-	"${hclvepfile}" "${lplvepfile}" "${lymphoidvepfile}" -p "$pindelvepfile"
+	"${hclvepfile}" "${lplvepfile}" "${lymphoidvepfile}" "${t_nhlvepfile}" \
+	"${plasma_cell_myelomavepfile}" -p "$pindelvepfile"
 
 	mark-section "uploading output"
 
@@ -314,7 +334,7 @@ main() {
 		~/out/allgenes_filtered_vcf ~/out/lymphoid_filtered_vcf/ ~/out/myeloid_filtered_vcf/\
 		~/out/cll_filtered_vcf ~/out/tp53_filtered_vcf ~/out/lgl_filtered_vcf ~/out/hcl_filtered_vcf\
 		~/out/lpl_filtered_vcf ~/out/bsvi_vcf ~/out/text_report ~/out/excel_report ~/out/pindel_vep_vcf\
-		~/out/t_nhl_filtered_vcf ~/plasma_cell_myeloma_filtered_vcf
+		~/out/t_nhl_filtered_vcf ~/out/plasma_cell_myeloma_filtered_vcf
 
 	bsvivcf="${mutect2_vcf_prefix}_allgenes_bsvi.vcf"
 	variantlist="${mutect2_vcf_prefix}_allgenes.tsv"
