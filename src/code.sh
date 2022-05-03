@@ -81,6 +81,8 @@ function filter_vep_vcf {
 main() {
 	set -e -x -v -o pipefail
 
+	export BCFTOOLS_PLUGINS=/usr/local/libexec/bcftools/
+
 	mark-section "downloading inputs"
 	time dx-download-all-inputs --parallel
 
@@ -181,15 +183,15 @@ main() {
 	# *vepfile (output VCF annotated and filtered by VEP)
 
 	# full gene transcript list
-	all_genes_transcripts="NM_002074\.,NM_000760.,NM_005373\.,NM_002227\.,NM_002524\.,NM_022552\.,NM_012433\.,\
-	NM_005896\.,NM_002468\.,NM_032638\.,NM_000222\.,NM_001127208\.,NM_001349798\.,NM_002520\.,NM_016222\.,NM_006060\.,\
-	NM_181552\.,NM_001913\.,NM_004333\.,NM_004456\.,NM_170606\.,NM_006265\.,NM_004972\.,NM_016734\.,NM_017617\.,NM_000314\.,\
-	NM_005343\.,NM_024426\.,NM_001165\.,NM_000051\.,NM_001197104\.,NM_005188\.,NM_001987\.,NM_018638\.,NM_004985\.,\
-	NM_001136023\.,NM_005475\.,NM_002834\.,NM_004119\.,NM_002168\.,NM_004380\.,NM_000546\.,NM_001042492\.,\
-	NM_012448\.,NM_139276\.,NM_003620\.,NM_001195427\.,NM_015559\.,NM_004343\.,NM_004364\.,NM_015338\.,NM_080425\.,NM_016592\.,\
-	NM_00175\.,NM_006758\.,NM_001429\.,NM_005089\.,NM_001123385\.,NM_002049\.,NM_001042750\.,\
-	NM_001379451\.,NM_001015877\.,NM_014915\.,NM_006015\.,NM_000633\., NM_000061\.,NM_032415\., NM_003467\.,\
-	NM_014953\.,NM_017709\.,NM_002015\.,NM_002460\.,NM_002755\.,NM_001145785\.,NM_002661\.,NM_001664\.,NM_003334\."
+	all_genes_transcripts="NM_002074.,NM_000760.,NM_005373.,NM_002227.,NM_002524.,NM_022552.,NM_012433.,\
+	NM_005896.,NM_002468.,NM_032638.,NM_000222.,NM_001127208.,NM_001349798.,NM_002520.,NM_016222.,NM_006060.,\
+	NM_181552.,NM_001913.,NM_004333.,NM_004456.,NM_170606.,NM_006265.,NM_004972.,NM_016734.,NM_017617.,NM_000314.,\
+	NM_005343.,NM_024426.,NM_001165.,NM_000051.,NM_001197104.,NM_005188.,NM_001987.,NM_018638.,NM_004985.,\
+	NM_001136023.,NM_005475.,NM_002834.,NM_004119.,NM_002168.,NM_004380.,NM_000546.,NM_001042492.,\
+	NM_012448.,NM_139276.,NM_003620.,NM_001195427.,NM_015559.,NM_004343.,NM_004364.,NM_015338.,NM_080425.,NM_016592.,\
+	NM_00175.,NM_006758.,NM_001429.,NM_005089.,NM_001123385.,NM_002049.,NM_001042750.,\
+	NM_001379451.,NM_001015877.,NM_014915.,NM_006015.,NM_000633., NM_000061.,NM_032415., NM_003467.,\
+	NM_014953.,NM_017709.,NM_002015.,NM_002460.,NM_002755.,NM_001145785.,NM_002661.,NM_001664.,NM_003334."
 
 	# annotate full mutect2 VCF with VEP
 	# outputs to $splitvepfile that is then filtered by transcript lists
@@ -210,46 +212,46 @@ main() {
 
 
 	# filter with VEP for lymphoid genes list
-	lymphoid_transcripts="NM_000051\.,NM_001165\.,NM_004333\.,NM_004380\.,NM_001429\.,NM_004456\.,\
-	NM_001349798\.,NM_005343\.,NM_004985\.,NM_002468\.,NM_017617\.,NM_002524\.,NM_016734\.,NM_012433\.,\
-	NM_139276\.,NM_012448\.,NM_000546\.,NM_006015\.,NM_000633\., NM_000061\.,NM_032415\.,NM_003467\.,\
-	NM_002015\.,NM_002755\.,NM_001145785\."
+	lymphoid_transcripts="NM_000051.,NM_001165.,NM_004333.,NM_004380.,NM_001429.,NM_004456.,\
+	NM_001349798.,NM_005343.,NM_004985.,NM_002468.,NM_017617.,NM_002524.,NM_016734.,NM_012433.,\
+	NM_139276.,NM_012448.,NM_000546.,NM_006015.,NM_000633., NM_000061.,NM_032415.,NM_003467.,\
+	NM_002015.,NM_002755.,NM_001145785."
 	lymphoidvepfile="${mutect2_vcf_prefix}_pan-lymphoidvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$lymphoidvepfile" "$lymphoid_transcripts"
 
 	# filter with VEP for myeloid genes list
-	myeloid_transcripts="NM_015338\.,NM_001123385\.,NM_001379451\.,NM_004333\.,NM_004343\.,NM_005188\.,\
-	NM_004364\.,NM_000760\.,NM_181552\.,NM_001913\.,NM_016222\.,NM_022552\.,NM_018638\.,NM_001987\.,NM_004456\.,\
-	NM_001349798\.,NM_004119\.,NM_002049\.,NM_032638\.,NM_080425\.,NM_016592\.,NM_002074\.,NM_005343\.,NM_005896\.,NM_002168\.,\
-	NM_006060\.,NM_002227\.,NM_004972\.,NM_000222\.,NM_001197104\.,NM_004985\.,NM_005373\.,NM_001042492\.,\
-	NM_001136023\.,NM_017617\.,NM_002520\.,NM_002524\.,NM_016734\.,NM_001015877\.,NM_003620\.,NM_000314\.,\
-	NM_002834\.,NM_006265\.,NM_001754\.,NM_015559\.,NM_012433\.,NM_005475\.,NM_001195427\.,NM_001042750\.,\
-	NM_139276\.,NM_012448\.,NM_001127208\.,NM_000546\.,NM_006758\.,NM_024426\.,NM_005089\.,NM_014915\.,NM_000633\.,\
-	NM_003334\."
+	myeloid_transcripts="NM_015338.,NM_001123385.,NM_001379451.,NM_004333.,NM_004343.,NM_005188.,\
+	NM_004364.,NM_000760.,NM_181552.,NM_001913.,NM_016222.,NM_022552.,NM_018638.,NM_001987.,NM_004456.,\
+	NM_001349798.,NM_004119.,NM_002049.,NM_032638.,NM_080425.,NM_016592.,NM_002074.,NM_005343.,NM_005896.,NM_002168.,\
+	NM_006060.,NM_002227.,NM_004972.,NM_000222.,NM_001197104.,NM_004985.,NM_005373.,NM_001042492.,\
+	NM_001136023.,NM_017617.,NM_002520.,NM_002524.,NM_016734.,NM_001015877.,NM_003620.,NM_000314.,\
+	NM_002834.,NM_006265.,NM_001754.,NM_015559.,NM_012433.,NM_005475.,NM_001195427.,NM_001042750.,\
+	NM_139276.,NM_012448.,NM_001127208.,NM_000546.,NM_006758.,NM_024426.,NM_005089.,NM_014915.,NM_000633.,\
+	NM_003334."
 	myeloidvepfile="${mutect2_vcf_prefix}_myeloidvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$myeloidvepfile" "$myeloid_transcripts"
 
 
 	# filter with VEP for CLL_Extended genes list
-	cll_transcripts="NM_001165\.,NM_004333\.,NM_001349798\.,NM_005343\.,NM_004985\.,NM_002468\.,NM_017617\.,\
-	NM_002524\.,NM_012433\.,NM_000546\.,NM_000051\.,NM_000633\.,NM_000061\.,NM_002661\."
+	cll_transcripts="NM_001165.,NM_004333.,NM_001349798.,NM_005343.,NM_004985.,NM_002468.,NM_017617.,\
+	NM_002524.,NM_012433.,NM_000546.,NM_000051.,NM_000633.,NM_000061.,NM_002661."
 	cllvepfile="${mutect2_vcf_prefix}_CLL-extendedvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$cllvepfile" "$cll_transcripts"
 
 
 	# filter with VEP for T-NHL
-	t_nhl_transcripts="NM_022552\.,NM_002168\.,NM_001664\.,NM_001127208\."
+	t_nhl_transcripts="NM_022552.,NM_002168.,NM_001664.,NM_001127208."
 	t_nhlvepfile="${mutect2_vcf_prefix}_t_nhlvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$t_nhlvepfile" "$t_nhl_transcripts"
 
 
 	# filter with VEP for Plasma Cell Myeloma
-	plasma_cell_myeloma_transcripts="NM_004333\.,NM_014953\.,NM_017709\.,NM_002460\.,NM_004985\.,NM_002524\.,\
-	NM_000546\."
+	plasma_cell_myeloma_transcripts="NM_004333.,NM_014953.,NM_017709.,NM_002460.,NM_004985.,NM_002524.,\
+	NM_000546."
 	plasma_cell_myelomavepfile="${mutect2_vcf_prefix}_plasma_cell_myelomavep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$plasma_cell_myelomavepfile" "$plasma_cell_myeloma_transcripts"
@@ -258,11 +260,11 @@ main() {
 	# filter with VEP for TP53
 	tp53vepfile="${mutect2_vcf_prefix}_TP53vep.vcf"
 
-	filter_vep_vcf "${splitvepfile}" "$tp53vepfile" "NM_000546\."
+	filter_vep_vcf "${splitvepfile}" "$tp53vepfile" "NM_000546."
 
 
 	# filter with VEP for LGL
-	lgl_transcripts="NM_139276\.,NM_012448\."
+	lgl_transcripts="NM_139276.,NM_012448."
 	lglvepfile="${mutect2_vcf_prefix}_LGLvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$lglvepfile" "$lgl_transcripts"
@@ -271,13 +273,13 @@ main() {
 	# run vep for HCL
 	hclvepfile="${mutect2_vcf_prefix}_HCLvep.vcf"
 
-	filter_vep_vcf "${splitvepfile}" "$hclvepfile" "NM_004333\.,NM_002755\."
+	filter_vep_vcf "${splitvepfile}" "$hclvepfile" "NM_004333.,NM_002755."
 
 
 	# run vep for LPL
 	lplvepfile=${mutect2_vcf_prefix}_LPLvep.vcf
 
-	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468\.,NM_003467\."
+	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468.,NM_003467."
 
 
 	# annotate pindel vcf with VEP
@@ -289,7 +291,7 @@ main() {
 	rm "$pindel_annotated" && mv tmp2.vcf "$pindel_annotated"
 
 	# filter pindel vcf by transcripts
-	pindel_transcripts="NM_004119\.,NM_004343\.,NM_004364\."
+	pindel_transcripts="NM_004119.,NM_004343.,NM_004364."
 	pindelvepfile="${pindel_vcf_prefix}_vep.vcf"
 
 	filter_vep_vcf "$pindel_annotated" "$pindelvepfile" "$pindel_transcripts"
