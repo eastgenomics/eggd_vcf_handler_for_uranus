@@ -266,7 +266,7 @@ def split_info(vcf_df) -> pd.DataFrame:
         info_df = pd.DataFrame(info_values, columns=info_keys)
         vcf_df = pd.concat([vcf_df, info_df], axis=1)
 
-        # drop INFO and CSQ as we fully split them out
+        # drop INFO as we fully split them out
         vcf_df.drop(['INFO'], axis=1, inplace=True)
 
         # remove CSQ_ prefix from column names
