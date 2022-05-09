@@ -194,7 +194,7 @@ main() {
 	NM_005343.,NM_024426.,NM_001165.,NM_000051.,NM_001197104.,NM_005188.,NM_001987.,NM_018638.,NM_004985.,\
 	NM_001136023.,NM_005475.,NM_002834.,NM_004119.,NM_002168.,NM_004380.,NM_000546.,NM_001042492.,\
 	NM_012448.,NM_139276.,NM_003620.,NM_001195427.,NM_015559.,NM_004343.,NM_004364.,NM_015338.,NM_080425.,NM_016592.,\
-	NM_00175.,NM_006758.,NM_001429.,NM_005089.,NM_001123385.,NM_002049.,NM_001042750.,\
+	NM_001754.,NM_006758.,NM_001429.,NM_005089.,NM_001123385.,NM_002049.,NM_001042750.,\
 	NM_001379451.,NM_001015877.,NM_014915.,NM_006015.,NM_000633., NM_000061.,NM_032415., NM_003467.,\
 	NM_014953.,NM_017709.,NM_002015.,NM_002460.,NM_002755.,NM_001145785.,NM_002661.,NM_001664.,NM_003334."
 
@@ -202,10 +202,6 @@ main() {
 	# outputs to $splitvepfile that is then filtered by transcript lists
 	splitvepfile="${mutect2_vcf_prefix}_split_filevep.vcf"
 	annotate_vep_vcf "$splitfile" "$splitvepfile"
-
-	# split VCF annotation to separate records where more than one transcript of annotation is present
-	# bcftools +split-vep -d -c - -a CSQ "$splitvepfile" -o tmp.vcf
-	# rm "$splitvepfile" && mv tmp.vcf "$splitvepfile"
 
 
 	# filter mutect2 vcf with each set of panel transcripts
