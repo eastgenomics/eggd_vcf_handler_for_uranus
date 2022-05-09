@@ -185,9 +185,9 @@ def filter_common(vcf_df):
         vcf_df['Prev_Count'].apply(
             lambda x: (int(x.split("/")[0]) / int(x.split("/")[1])) > 0.5
         ) | (
-            vcf_df['CONSEQ'] == 'synonymous_variant'
+            vcf_df['Consequence'] == 'synonymous_variant'
         )) & (
-            np.logical_not(vcf_df['GENE'].isin(['TP53', 'GATA2']))
+            np.logical_not(vcf_df['SYMBOL'].isin(['TP53', 'GATA2']))
     ))
 
     # filter df by indixes of filter conditions
@@ -195,6 +195,87 @@ def filter_common(vcf_df):
     vcf_df = vcf_df.drop(filter_idxs[0])
 
     return vcf_df, filtered_df
+
+
+def split_info(vcf_df) -> pd.DataFrame:
+        """
+        Splits out the INFO column of vcf to all separate values, excluding
+        the CSQ values. This transforms as:
+
+        -----------------------------------------------------------------------
+        INFO
+        -----------------------------------------------------------------------
+        AC=1;AF=0.5;AN=2;BaseQRankSum=-0.244;DB;DP=215;......
+        AC=1;AF=0.5;AN=2;BaseQRankSum=-0.291;;DB;DP=207;.....
+        AC=2;AF=1;AN=2;DB;DP=310;ExcessHet=3.0103;FS=0;......
+        -----------------------------------------------------------------------
+                                      |
+                                      |
+                                      ▼
+        -----------------------------------------------------------------------
+         AC  |  AF  |  AN  |  DB  |  DP  |  ExcessHet  |  BaseQRankSum  |  FS
+        -----------------------------------------------------------------------
+         1   |  0.5 |  2   | True |  215 |             |  -0.244        |
+        -----------------------------------------------------------------------
+         1   |  0.5 |  2   | True |  207 |             |  -0.291        |
+        -----------------------------------------------------------------------
+         2   |  1   |  2   | True |  310 |  3.0103     |                |  0
+        -----------------------------------------------------------------------
+
+
+        Parameters
+        ----------
+        vcf_df : pd.DataFrame
+            dataframe of all variants from a vcf
+
+        Returns
+        -------
+        vcf_df : pd.DataFrame
+            dataframe of all variants from a vcf with separated INFO fields
+        """
+        # get the key value pairs of INFO data
+        info_pairs = [x.split(';') for x in vcf_df['INFO'].tolist()]
+        info_pairs = [[x for x in lst if x] for lst in info_pairs]
+
+        # get unique list of keys from key=value pairs in INFO from all rows
+        info_keys = sorted(list(set([
+            x.split('=')[0] if '=' in x else x for pair in info_pairs for x in pair
+        ])))
+        info_keys = [x for x in info_keys if x]  # can end up with empty string
+
+        info_values = []
+
+        # info_pairs -> list of list of pairs, one list per variant
+        for variant_pairs in info_pairs:
+            # for every variants values, split them out to dict to add to df
+            pair_values = {}
+
+            for pair in variant_pairs:
+                if '=' in pair:
+                    # key value pair
+                    key, value = pair.split('=')
+                else:
+                    # Flag value present (e.g STR)
+                    key, value = pair, True
+
+                pair_values[key] = value
+
+            info_values.append(pair_values)
+
+        # build df of values to add to main df
+        info_df = pd.DataFrame(info_values, columns=info_keys)
+        vcf_df = pd.concat([vcf_df, info_df], axis=1)
+
+        # drop INFO as we fully split them out
+        vcf_df.drop(['INFO'], axis=1, inplace=True)
+
+        # remove CSQ_ prefix from column names
+        vcf_df.columns = [
+            x.replace('CSQ_', '') if x.startswith('CSQ_') else x
+            for x in vcf_df.columns.tolist()
+        ]
+
+        return vcf_df
 
 
 def df_report_formatting(panel, vcf_df):
@@ -210,44 +291,37 @@ def df_report_formatting(panel, vcf_df):
     Returns:
         - vcf_df (df): df of variants with fun formatting
     """
-    # Get DP field from INFO column, use join instead of
-    # using index in case of missing and being empty => index error
-    vcf_df['Read_Depth'] = vcf_df['INFO'].str.split(';').apply(
-        lambda x: ''.join((y for y in x if y.startswith('DP=')))
-    )
-    vcf_df['Read_Depth'] = vcf_df['Read_Depth'].apply(
-        lambda x: x.replace('DP=', '')
-    )
+    # split out fields from INFO column to separate columns
+    if not vcf_df.empty:
+        vcf_df = split_info(vcf_df=vcf_df)
+    else:
+        # empty df from vcf with no variants => won't have correct columns from
+        # splitting, add these as empty columns to the df to not break downstream
+        vcf_df[[
+            'samplename', 'SYMBOL', 'Transcript_ID', 'EXON', 'HGVSc', 'HGVSp',
+            'Protein_ID', 'Consequence', 'Read_Depth', 'FILTER', 'ClinVar',
+            'ClinVar_CLNSIG', 'ClinVar_CLNDN', 'COSMIC', 'dbSNP', 'gnomAD_AF',
+            'CADD_PHRED', 'AF%', 'Prev_Count', 'Report_text'
+        ]] = pd.NA
 
-    # get CSQ field from INFO column, use join instead of
-    # using index in case of missing and being empty => index error
-    vcf_df['INFO'] = vcf_df['INFO'].str.split(';').apply(
-        lambda x: ''.join((y for y in x if y.startswith('CSQ=')))
-    )
+        # set order
+        vcf_df = vcf_df[[
+            'samplename', 'CHROM', 'POS', 'SYMBOL', 'Transcript_ID', 'EXON',
+            'HGVSc', 'HGVSp', 'Protein_ID', 'Consequence', 'Read_Depth',
+            'AF%', 'FILTER', 'ClinVar', 'ClinVar_CLNSIG',
+            'ClinVar_CLNDN', 'COSMIC', 'dbSNP', 'gnomAD_AF', 'CADD_PHRED',
+            'Prev_Count', 'Report_text'
+        ]]
 
-    info_cols = [
-        'GENE', 'VARIANT_CLASS', 'CONSEQ', 'EXON', 'HGVSc', 'HGVSp',
-        'gnomAD_AF', 'CADD_PHRED', 'DB', 'ClinVar', 'ClinVar_CLNDN',
-        'ClinVar_CLNSIG', 'COSMIC', 'Prev_AC', 'Prev_NS', 'Feature'
-    ]
+        return vcf_df
 
-    # splits info column to cols defined in info_cols
-    vcf_df[info_cols] = vcf_df['INFO'].str.split('|', -1, expand=True)
-
-    # drop unndeeded Feature column (transcript field from vep filter)
-    vcf_df.drop(columns=['Feature'], inplace=True)
-
-    # remove info id from gene
-    vcf_df['GENE'] = vcf_df['GENE'].apply(lambda x: x.replace('CSQ=', ''))
-
-    # calculate Prev_count, first adjust those not previously seen that have
-    # empty strings for prev_ac and prev_ns
-
-    # first get total number of samples across all, should return single value
+    # first get total number of samples across all variants, remove '.' or
+    # empty strings if present
     uniq_prev_ns = list(set(filter(None, vcf_df['Prev_NS'])))
-
-    assert len(uniq_prev_ns) <= 1, \
-        f"Differing total previous samples identified: {uniq_prev_ns}"
+    if '.' in uniq_prev_ns:
+        uniq_prev_ns.remove('.')
+    if '' in uniq_prev_ns:
+        uniq_prev_ns.remove('')
 
     # handle cases where vcf has very few variants and all haven't been seen
     # previously => no prev_ns values => empty list, set to empty string
@@ -256,10 +330,10 @@ def df_report_formatting(panel, vcf_df):
     # those not previously seen will have empty string, fill appropriately to
     # display as 0/{total}
     vcf_df['Prev_AC'] = vcf_df['Prev_AC'].apply(
-        lambda x: str(0) if x == "" else x)
+        lambda x: str(0) if x == "." or x == "" else x)
 
     vcf_df['Prev_NS'] = vcf_df['Prev_NS'].apply(
-        lambda x: uniq_prev_ns if x == "" else x)
+        lambda x: uniq_prev_ns if x == "." or x == "" else x)
 
     vcf_df['Prev_Count'] = vcf_df['Prev_AC'] + '/' + vcf_df['Prev_NS']
 
@@ -317,22 +391,23 @@ def df_report_formatting(panel, vcf_df):
 
         vcf_df.insert(16, 'Mutect2_AF%', af_values)
 
+        vcf_df.rename(columns={'DP': 'Read_Depth'}, inplace=True)
+
+
     # cosmic annotation returns duplicates for each record in cosmic vcf
     # turn to set to be unique, join in case there is more than one
     vcf_df['COSMIC'] = vcf_df['COSMIC'].apply(
         lambda x: (','.join(set(x.split('&')))) if x else x
     )
 
-    # waiting to hear if the haemonc team want hgmd or not
-    # vcf_df['HGMD'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
-    #     lambda x: ','.join((y for y in x if y.startswith('CM', 'CD')))
-    # )
-    vcf_df['dbSNP'] = vcf_df['DB'].str.split(r'\&|\||,').apply(
+    vcf_df['dbSNP'] = vcf_df['Existing_variation'].str.split(r'\&|\||,').apply(
         lambda x: ','.join((y for y in x if y.startswith('rs')))
     )
 
     # Include word exon in exon field to overcome excel
-    vcf_df['EXON'] = vcf_df['EXON'].apply(lambda x: 'exon ' + x if x else None)
+    vcf_df['EXON'] = vcf_df['EXON'].apply(
+        lambda x: 'exon ' + x if x and x != "." else None
+    )
 
     # scientists are picky and want NM_ and NP_ changing in HGVS
     vcf_df['Transcript_ID'] = vcf_df['HGVSc'].str.split(':').apply(
@@ -354,7 +429,7 @@ def df_report_formatting(panel, vcf_df):
     # add interestingly formatted report text column
     vcf_df['Report_text'] = vcf_df[vcf_df.columns.tolist()].apply(
         lambda x: (
-            f"{x['GENE']} {x['CONSEQ']} "
+            f"{x['SYMBOL']} {x['Consequence']} "
             f"{'in ' + x['EXON'].split('/')[0] if x['EXON'] else ''} \n"
             f"HGVSc: {x['HGVSc'] if x['HGVSc'] else 'None'} \n"
             f"HGVSp: {x['HGVSp'] if x['HGVSp'] else 'None'} \n"
@@ -375,8 +450,8 @@ def df_report_formatting(panel, vcf_df):
 
     # select and re-order df columns
     vcf_df = vcf_df[[
-        'samplename', 'CHROM', 'POS', 'GENE', 'Transcript_ID', 'EXON', 'HGVSc',
-        'HGVSp', 'Protein_ID', 'CONSEQ', 'Read_Depth', f'{caller}_AF%',
+        'samplename', 'CHROM', 'POS', 'SYMBOL', 'Transcript_ID', 'EXON', 'HGVSc',
+        'HGVSp', 'Protein_ID', 'Consequence', 'Read_Depth', f'{caller}_AF%',
         'FILTER', 'ClinVar', 'ClinVar_CLNSIG', 'ClinVar_CLNDN', 'COSMIC',
         'dbSNP', 'gnomAD_AF', 'CADD_PHRED', 'Prev_Count', 'Report_text'
     ]]
@@ -508,6 +583,8 @@ def write_xlsx(fname, vcfs_dict):
     """
     excel_fname = fname.replace('allgenesvep.vcf', 'panels.xlsx')
 
+    print(f"Writing xlsx file to: {excel_fname}")
+
     # write excel
     writer = pd.ExcelWriter(excel_fname, engine="xlsxwriter")
     workbook = writer.book
@@ -582,9 +659,9 @@ if __name__ == "__main__":
 
     # apply formatting to each panel df for xlsx file
     for panel, vcf_df in vcfs_dict.items():
-        if not vcf_df.empty:
-            vcf_df = df_report_formatting(panel, vcf_df)
-            formatted_dfs[panel] = vcf_df
+        vcf_df = df_report_formatting(panel, vcf_df)
+        formatted_dfs[panel] = vcf_df
+
         if panel == 'myeloid':
             # filtering myeloid panel for common variants
             vcf_df, filter_vcf_df = filter_common(vcf_df)
