@@ -76,10 +76,17 @@ function filter_vep_vcf {
 	./filter_vep -i /opt/vep/.vep/"$input_vcf" \
 	-o /opt/vep/.vep/"$output_vcf" --only_matched --filter \
 	"(gnomAD_AF < 0.10 or not gnomAD_AF) and $transcript_list"
+
+	# split VCF annotation to separate records where more than one transcript of annotation is present
+	bcftools +split-vep -d -c - -a CSQ "$output_vcf" | bcftools annotate -x INFO/CSQ -o tmp.vcf
+	rm "$output_vcf" && mv tmp.vcf "$output_vcf"  # overwrite input vcf with split vcf
 }
+
 
 main() {
 	set -e -x -v -o pipefail
+
+	export BCFTOOLS_PLUGINS=/usr/local/libexec/bcftools/
 
 	mark-section "downloading inputs"
 	time dx-download-all-inputs --parallel
@@ -98,6 +105,7 @@ main() {
 
 	mark-section "filtering mutect2 VCF"
 	# retain variants that are: # within ROIs (mutect2_bed file),
+	#	-u with bedtools to get unique records due to overlapping regions from multiple transcripts
 	#   have at least one allele >0.03 AF, and have DP >99
 	# fix AD and RPA number in header
 	# split multiallelics using --keep-sum AD which changes the ref AD to be a sum
@@ -107,10 +115,10 @@ main() {
 	# bedtools and bcftools are app assets
 	splitfile="${mutect2_vcf_prefix}_split.vcf"
 
-	time bedtools intersect -header -a "${mutect2_vcf_path}" -b "${mutect2_bed_path}" \
+	time bedtools intersect -header -u -a "${mutect2_vcf_path}" -b "${mutect2_bed_path}" \
+  | bcftools norm -f "${mutect2_fasta_path}" -m -any --keep-sum AD - \
 	| bcftools view -i "FORMAT/AF[*]>0.03" - \
 	| bcftools view -i "FORMAT/DP>99" - \
-	| bcftools norm -f "${mutect2_fasta_path}" -m -any --keep-sum AD - \
 	-o ~/"${splitfile}"
 
 	mark-section "filtering pindel VCF"
@@ -133,18 +141,27 @@ main() {
 	sample_id=$(echo $mutect2_vcf_name | cut -d'-' -f2)  # the id to add to the vcfs
 
 	# add sample id to mutect2 vcf on line before ##tumour_sample in header
-	zgrep "^#" "$splitfile" | sed s"/^##tumor_sample/##SAMPLE=${sample_id}\n&/" > mutect2.header
-	bcftools reheader -h mutect2.header "$splitfile" > "${mutect2_vcf_prefix}.opencga.vcf.gz"
+	# no SAMPLE line already present so create one from full name and ID we want
+	mutect2_column_name=$(grep "#CHROM" "$splitfile" | cut -f10)
+	sample_field="##SAMPLE=<ID=${mutect2_column_name},SampleName=${sample_id}>"
 
-	# add sample id to cgppindel vcf on line before other ##SAMPLE lines
-	# pindel vcf contains 2 SAMPLE entries already, therefore we will also
-	# rename these so there is only one ##SAMPLE for opencga to pick up
+	zgrep "^#" "$splitfile" | sed s"/^##tumor_sample/${sample_field}\n&/" > mutect2.header
+	bcftools reheader -h mutect2.header "$splitfile" > "${mutect2_vcf_prefix}.opencga.vcf"
+
+	# sense check in logs it looks correct
+	zgrep "^#" "${mutect2_vcf_prefix}.opencga.vcf"
+
+	# modify SampleName for tumour sample line to correctly link to our sample ID
+	tumour_sample=$(grep "##SAMPLE=<ID=TUMOUR" "$pindel_filtered_vcf")
+	header_line=$(sed s"/SampleName=[A-Za-z0-9\_\-]*/SampleName=${sample_id}/" <<< $tumour_sample)
+
 	zgrep "^#" "$pindel_filtered_vcf" \
-		| sed s"/^##SAMPLE=<ID=NORMAL/##SAMPLE=${sample_id}\n&/" \
-		| sed s"/##SAMPLE=<ID/##SAMPLE_CGPPINDEL=<ID/g" > pindel.header
+		| sed s"/^##SAMPLE=<ID=TUMOUR.*/${header_line}/" > pindel.header
 
-	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf.gz"
+	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf"
 
+	# sense check in logs it looks correct
+	zgrep '^#' "${pindel_vcf_prefix}.opencga.vcf"
 
 	mark-section "annotating and further filtering"
 	# permissions to write to /home/dnanexus
@@ -171,13 +188,14 @@ main() {
 
 	# full gene transcript list
 	all_genes_transcripts="NM_002074.,NM_000760.,NM_005373.,NM_002227.,NM_002524.,NM_022552.,NM_012433.,\
-	NM_005896.,NM_002468.,NM_032638.,NM_000222.,NM_001127208.,NM_033632.,NM_002520.,NM_016222.,NM_006060.,\
-	NM_181500.,NM_004333.,NM_004456.,NM_170606.,NM_006265.,NM_004972.,NM_016734.,NM_017617.,NM_000314.,\
-	NM_005343.,NM_024426.,NM_001165.,NM_000051.,NM_001197104.,NM_005188.,NM_001987.,NM_018638.,NM_033360.,\
+	NM_005896.,NM_002468.,NM_032638.,NM_000222.,NM_001127208.,NM_001349798.,NM_002520.,NM_016222.,NM_006060.,\
+	NM_181552.,NM_001913.,NM_004333.,NM_004456.,NM_170606.,NM_006265.,NM_004972.,NM_016734.,NM_017617.,NM_000314.,\
+	NM_005343.,NM_024426.,NM_001165.,NM_000051.,NM_001197104.,NM_005188.,NM_001987.,NM_018638.,NM_004985.,\
 	NM_001136023.,NM_005475.,NM_002834.,NM_004119.,NM_002168.,NM_004380.,NM_000546.,NM_001042492.,\
-	NM_012448.,NM_139276.,NM_003620.,NM_001195427.,NM_015559.,NM_004343.,NM_004364.,NM_015338.,NM_080425.,\
+	NM_012448.,NM_139276.,NM_003620.,NM_001195427.,NM_015559.,NM_004343.,NM_004364.,NM_015338.,NM_080425.,NM_016592.,\
 	NM_001754.,NM_006758.,NM_001429.,NM_005089.,NM_001123385.,NM_002049.,NM_001042750.,\
-	NM_001184772.,NM_001015877."
+	NM_001379451.,NM_001015877.,NM_014915.,NM_006015.,NM_000633., NM_000061.,NM_032415., NM_003467.,\
+	NM_014953.,NM_017709.,NM_002015.,NM_002460.,NM_002755.,NM_001145785.,NM_002661.,NM_001664.,NM_003334."
 
 	# annotate full mutect2 VCF with VEP
 	# outputs to $splitvepfile that is then filtered by transcript lists
@@ -195,31 +213,49 @@ main() {
 
 	# filter with VEP for lymphoid genes list
 	lymphoid_transcripts="NM_000051.,NM_001165.,NM_004333.,NM_004380.,NM_001429.,NM_004456.,\
-	NM_033632.,NM_005343.,NM_033360.,NM_002468.,NM_017617.,NM_002524.,NM_016734.,NM_012433.,\
-	NM_139276.,NM_012448.,NM_000546."
+	NM_001349798.,NM_005343.,NM_004985.,NM_002468.,NM_017617.,NM_002524.,NM_016734.,NM_012433.,\
+	NM_139276.,NM_012448.,NM_000546.,NM_006015.,NM_000633., NM_000061.,NM_032415.,NM_003467.,\
+	NM_002015.,NM_002755.,NM_001145785."
 	lymphoidvepfile="${mutect2_vcf_prefix}_pan-lymphoidvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$lymphoidvepfile" "$lymphoid_transcripts"
 
+
 	# filter with VEP for myeloid genes list
-	myeloid_transcripts="NM_015338.,NM_001123385.,NM_001184772.,NM_004333.,NM_004343.,NM_005188.,\
-	NM_004364.,NM_000760.,NM_181500.,NM_016222.,NM_022552.,NM_018638.,NM_001987.,NM_004456.,\
-	NM_033632.,NM_004119.,NM_002049.,NM_032638.,NM_080425.,NM_002074.,NM_005343.,NM_005896.,NM_002168.,\
-	NM_006060.,NM_002227.,NM_004972.,NM_000222.,NM_001197104.,NM_033360.,NM_005373.,NM_001042492.,\
+	myeloid_transcripts="NM_015338.,NM_001123385.,NM_001379451.,NM_004333.,NM_004343.,NM_005188.,\
+	NM_004364.,NM_000760.,NM_181552.,NM_001913.,NM_016222.,NM_022552.,NM_018638.,NM_001987.,NM_004456.,\
+	NM_001349798.,NM_004119.,NM_002049.,NM_032638.,NM_080425.,NM_016592.,NM_002074.,NM_005343.,NM_005896.,NM_002168.,\
+	NM_006060.,NM_002227.,NM_004972.,NM_000222.,NM_001197104.,NM_004985.,NM_005373.,NM_001042492.,\
 	NM_001136023.,NM_017617.,NM_002520.,NM_002524.,NM_016734.,NM_001015877.,NM_003620.,NM_000314.,\
 	NM_002834.,NM_006265.,NM_001754.,NM_015559.,NM_012433.,NM_005475.,NM_001195427.,NM_001042750.,\
-	NM_139276.,NM_012448.,NM_001127208.,NM_000546.,NM_006758.,NM_024426.,NM_005089."
+	NM_139276.,NM_012448.,NM_001127208.,NM_000546.,NM_006758.,NM_024426.,NM_005089.,NM_014915.,NM_000633.,\
+	NM_003334."
 	myeloidvepfile="${mutect2_vcf_prefix}_myeloidvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$myeloidvepfile" "$myeloid_transcripts"
 
 
 	# filter with VEP for CLL_Extended genes list
-	cll_transcripts="NM_001165.,NM_004333.,NM_033632.,NM_005343.,NM_033360.,NM_002468.,NM_017617.,\
-	NM_002524.,NM_012433.,NM_000546.,NM_000051."
+	cll_transcripts="NM_001165.,NM_004333.,NM_001349798.,NM_005343.,NM_004985.,NM_002468.,NM_017617.,\
+	NM_002524.,NM_012433.,NM_000546.,NM_000051.,NM_000633.,NM_000061.,NM_002661."
 	cllvepfile="${mutect2_vcf_prefix}_CLL-extendedvep.vcf"
 
 	filter_vep_vcf "${splitvepfile}" "$cllvepfile" "$cll_transcripts"
+
+
+	# filter with VEP for T-NHL
+	t_nhl_transcripts="NM_022552.,NM_002168.,NM_001664.,NM_001127208."
+	t_nhlvepfile="${mutect2_vcf_prefix}_T-NHLvep.vcf"
+
+	filter_vep_vcf "${splitvepfile}" "$t_nhlvepfile" "$t_nhl_transcripts"
+
+
+	# filter with VEP for Plasma Cell Myeloma
+	plasma_cell_myeloma_transcripts="NM_004333.,NM_014953.,NM_017709.,NM_002460.,NM_004985.,NM_002524.,\
+	NM_000546."
+	plasma_cell_myelomavepfile="${mutect2_vcf_prefix}_plasma-cell-myelomavep.vcf"
+
+	filter_vep_vcf "${splitvepfile}" "$plasma_cell_myelomavepfile" "$plasma_cell_myeloma_transcripts"
 
 
 	# filter with VEP for TP53
@@ -238,13 +274,14 @@ main() {
 	# run vep for HCL
 	hclvepfile="${mutect2_vcf_prefix}_HCLvep.vcf"
 
-	filter_vep_vcf "${splitvepfile}" "$hclvepfile" "NM_004333."
+	filter_vep_vcf "${splitvepfile}" "$hclvepfile" "NM_004333.,NM_002755."
 
 
 	# run vep for LPL
 	lplvepfile=${mutect2_vcf_prefix}_LPLvep.vcf
 
-	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468."
+	filter_vep_vcf "$splitvepfile" "$lplvepfile" "NM_002468.,NM_003467."
+
 
 	# annotate pindel vcf with VEP
 	pindel_annotated="${pindel_vcf_prefix}_annotated.vcf"
@@ -256,6 +293,7 @@ main() {
 
 	filter_vep_vcf "$pindel_annotated" "$pindelvepfile" "$pindel_transcripts"
 
+
 	mark-section "BSVI workaround (overwriting GT) and creating variant list"
 
 	# install required python packages (asset)
@@ -265,7 +303,8 @@ main() {
 	# note that order of VCFs passed to -v determines order of sheets in excel
 	time python3 vcf_handler.py -a "${allgenesvepfile}" \
 	-v "${myeloidvepfile}" "${cllvepfile}" "${tp53vepfile}" "${lglvepfile}" \
-	"${hclvepfile}" "${lplvepfile}" "${lymphoidvepfile}" -p "$pindelvepfile"
+	"${hclvepfile}" "${lplvepfile}" "${lymphoidvepfile}" "${t_nhlvepfile}" \
+	"${plasma_cell_myelomavepfile}" -p "$pindelvepfile"
 
 	mark-section "uploading output"
 
@@ -273,14 +312,15 @@ main() {
 	mkdir -p ~/out/mutect2_opencga_vcf ~/out/cgppindel_opencga_vcf\
 		~/out/allgenes_filtered_vcf ~/out/lymphoid_filtered_vcf/ ~/out/myeloid_filtered_vcf/\
 		~/out/cll_filtered_vcf ~/out/tp53_filtered_vcf ~/out/lgl_filtered_vcf ~/out/hcl_filtered_vcf\
-		~/out/lpl_filtered_vcf ~/out/bsvi_vcf ~/out/text_report ~/out/excel_report ~/out/pindel_vep_vcf
+		~/out/lpl_filtered_vcf ~/out/bsvi_vcf ~/out/text_report ~/out/excel_report ~/out/pindel_vep_vcf\
+		~/out/t_nhl_filtered_vcf ~/out/plasma_cell_myeloma_filtered_vcf
 
 	bsvivcf="${mutect2_vcf_prefix}_allgenes_bsvi.vcf"
 	variantlist="${mutect2_vcf_prefix}_allgenes.tsv"
 	excellist="${mutect2_vcf_prefix}_panels.xlsx"
 
-	mv ~/"${mutect2_vcf_prefix}.opencga.vcf.gz" ~/out/mutect2_opencga_vcf/
-	mv ~/"${pindel_vcf_prefix}.opencga.vcf.gz" ~/out/cgppindel_opencga_vcf/
+	mv ~/"${mutect2_vcf_prefix}.opencga.vcf" ~/out/mutect2_opencga_vcf/
+	mv ~/"${pindel_vcf_prefix}.opencga.vcf" ~/out/cgppindel_opencga_vcf/
 	mv ~/"${pindelvepfile}" ~/out/pindel_vep_vcf/
 	mv ~/"${allgenesvepfile}" ~/out/allgenes_filtered_vcf/
 	mv ~/"${lymphoidvepfile}" ~/out/lymphoid_filtered_vcf/
@@ -290,6 +330,8 @@ main() {
 	mv ~/"${lglvepfile}" ~/out/lgl_filtered_vcf/
 	mv ~/"${hclvepfile}" ~/out/hcl_filtered_vcf/
 	mv ~/"${lplvepfile}" ~/out/lpl_filtered_vcf/
+	mv ~/"${t_nhlvepfile}" ~/out/t_nhl_filtered_vcf/
+	mv ~/"${plasma_cell_myelomavepfile}" ~/out/plasma_cell_myeloma_filtered_vcf/
 	mv ~/"${bsvivcf}" ~/out/bsvi_vcf/
 	mv ~/"${variantlist}" ~/out/text_report/
 	mv ~/"${excellist}" ~/out/excel_report/
