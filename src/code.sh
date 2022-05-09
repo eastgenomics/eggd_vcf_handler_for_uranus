@@ -116,15 +116,15 @@ main() {
 	splitfile="${mutect2_vcf_prefix}_split.vcf"
 
 	time bedtools intersect -header -u -a "${mutect2_vcf_path}" -b "${mutect2_bed_path}" \
-  | bcftools norm -f "${mutect2_fasta_path}" -m -any --keep-sum AD - \
+	| bcftools norm -f "${mutect2_fasta_path}" -m -any --keep-sum AD - \
 	| bcftools view -i "FORMAT/AF[*]>0.03" - \
 	| bcftools view -i "FORMAT/DP>99" - \
 	-o ~/"${splitfile}"
 
 	mark-section "filtering pindel VCF"
 	# Filtering of pindel vcf for:
-    # - only indels that intersect with the exons of interest bed file
-    # - only insertions with length greater than 2. This will remove the 1 bp false positive insertions
+	# - only indels that intersect with the exons of interest bed file
+	# - only insertions with length greater than 2. This will remove the 1 bp false positive insertions
 
 	mv /home/dnanexus/in/pindel_vcf/* /home/dnanexus
 	mv /home/dnanexus/in/pindel_vcf_idx/* /home/dnanexus
