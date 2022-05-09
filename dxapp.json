@@ -39,7 +39,7 @@
       "help": "The bed file will be used to remove variants outside the regions of interest",
       "class": "file",
       "patterns": ["coding_unrestricted*.bed"],
-      "default": {"$dnanexus_link": "file-FybyxV841zgB8v1y3fFbFB0G"},
+      "default": {"$dnanexus_link": "file-G9vKbv0433Gg2bP9GP72pxKJ"},
       "suggestions": [
         {
           "name": "001_Reference",
