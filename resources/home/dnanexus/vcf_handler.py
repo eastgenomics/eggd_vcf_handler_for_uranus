@@ -315,11 +315,13 @@ def df_report_formatting(panel, vcf_df):
 
         return vcf_df
 
-    # first get total number of samples across all variants, reverse sort where
-    # a not previously seen before variant is present and Prev_NS = '.' so the
-    # sample no is first
-    uniq_prev_ns = sorted(
-        list(set(filter(None, vcf_df['Prev_NS']))), reverse=True)
+    # first get total number of samples across all variants, remove '.' or
+    # empty strings if present
+    uniq_prev_ns = list(set(filter(None, vcf_df['Prev_NS'])))
+    if '.' in uniq_prev_ns:
+        uniq_prev_ns.remove('.')
+    if '' in uniq_prev_ns:
+        uniq_prev_ns.remove('')
 
     # handle cases where vcf has very few variants and all haven't been seen
     # previously => no prev_ns values => empty list, set to empty string
