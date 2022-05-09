@@ -105,6 +105,7 @@ main() {
 
 	mark-section "filtering mutect2 VCF"
 	# retain variants that are: # within ROIs (mutect2_bed file),
+	#	-u with bedtools to get unique records due to overlapping regions from multiple transcripts
 	#   have at least one allele >0.03 AF, and have DP >99
 	# fix AD and RPA number in header
 	# split multiallelics using --keep-sum AD which changes the ref AD to be a sum
