@@ -3,11 +3,11 @@
   "title": "eggd_vcf_handler_for_uranus",
   "summary": "Annotates and filters VCF files for Uranus",
   "properties": {
-    "githubRelease": "2.6.0"
+    "githubRelease": "2.6.1"
   },
   "dxapi": "1.0.0",
   "openSource": true,
-  "version": "2.6.0",
+  "version": "2.6.1",
   "inputSpec": [
     {
       "name": "mutect2_vcf",
@@ -454,7 +454,7 @@
       }
     ],
     "contactEmail": "East GLH Bioinformatics",
-    "whatsNew": "*2.6.0 Add 15 new genes, 2 new panels and able to handle multiple transcripts for a given gene \n * 2.5.2 Bug fix for wrongly raised AssertionError \n * 2.5.1 Fix bug on not removing .gz suffix from opencga vcfs; * 2.5.0 Add extra output VCFs with modified headers to include sample ID for uploading to openCGA \n * 2.4.0 Add filtering to myeloid tab of synonymous and common variants; Remove depcrecated transcript for CHEK2 \n * 2.3.0 Add custom annotation for Cosmic (fixes bug with multiple IDs added); Add filtering and annotation for pindel; Split annotation sources to separate inputs \n * 2.2.0 New MAF file as input; Refactoring \n * 2.1.0 Sample names added\n * 2.0.0 New panels; VEP input; previous counts\n * 1.5.7 Add CADD and ClinVar annotation\n * 1.5.3 Added excel workbook output with variants for each panel in separate sheets, removed synonymous variant filter, prefix exon numbers with the word exon to overcome excel, further report_text formatting\n * 1.4.12 Allele fraction in tsv variantlist\n * 1.4.10 Make mark-section and mark-success executable in github\n * 1.4.9 Minor changed to report_text field in tsv, and brings back gnomad AF in tsv(!)\n * 1.4.8 (Deprecated) Adds AF column to text report\n * 1.4.4 (Deprecated) Uses app assets\n * 1.3.4 (Deprecated) Creates text report\n * 1.2.10 (Deprecated) Creates BSVI VCF\n * 1.1.9 (Deprecated) With VEP\n * 1.0.0 (Deprecated) Initial app"
+    "whatsNew": "* 2.6.1 Change SampleName field in openCGA VCF header to be first field of filename\n *2.6.0 Add 15 new genes, 2 new panels and able to handle multiple transcripts for a given gene \n * 2.5.2 Bug fix for wrongly raised AssertionError \n * 2.5.1 Fix bug on not removing .gz suffix from opencga vcfs; * 2.5.0 Add extra output VCFs with modified headers to include sample ID for uploading to openCGA \n * 2.4.0 Add filtering to myeloid tab of synonymous and common variants; Remove depcrecated transcript for CHEK2 \n * 2.3.0 Add custom annotation for Cosmic (fixes bug with multiple IDs added); Add filtering and annotation for pindel; Split annotation sources to separate inputs \n * 2.2.0 New MAF file as input; Refactoring \n * 2.1.0 Sample names added\n * 2.0.0 New panels; VEP input; previous counts\n * 1.5.7 Add CADD and ClinVar annotation\n * 1.5.3 Added excel workbook output with variants for each panel in separate sheets, removed synonymous variant filter, prefix exon numbers with the word exon to overcome excel, further report_text formatting\n * 1.4.12 Allele fraction in tsv variantlist\n * 1.4.10 Make mark-section and mark-success executable in github\n * 1.4.9 Minor changed to report_text field in tsv, and brings back gnomad AF in tsv(!)\n * 1.4.8 (Deprecated) Adds AF column to text report\n * 1.4.4 (Deprecated) Uses app assets\n * 1.3.4 (Deprecated) Creates text report\n * 1.2.10 (Deprecated) Creates BSVI VCF\n * 1.1.9 (Deprecated) With VEP\n * 1.0.0 (Deprecated) Initial app"
   },
   "categories": [],
   "developers":[
