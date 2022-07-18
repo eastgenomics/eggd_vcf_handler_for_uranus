@@ -3,11 +3,11 @@
   "title": "eggd_vcf_handler_for_uranus",
   "summary": "Annotates and filters VCF files for Uranus",
   "properties": {
-    "githubRelease": "2.6.0"
+    "githubRelease": "2.6.1"
   },
   "dxapi": "1.0.0",
   "openSource": true,
-  "version": "2.6.0",
+  "version": "2.6.1",
   "inputSpec": [
     {
       "name": "mutect2_vcf",
