@@ -190,7 +190,7 @@ def filter_common(vcf_df):
             np.logical_not(vcf_df['SYMBOL'].isin(['TP53', 'GATA2']))
     ))
 
-    # filter df by indixes of filter conditions
+    # filter df by indices of filter conditions
     filtered_df = vcf_df.loc[filter_idxs]
     vcf_df = vcf_df.drop(filter_idxs[0])
 
@@ -539,7 +539,7 @@ def write_bsvi_vcf(fname, bsvi_df, bsvi_vcf_header):
 
     Outputs: .vcf file of variants for importing into bsvi
     """
-    vcf_fname = fname.replace('allgenesvep', 'allgenes_bsvi')
+    vcf_fname = fname.replace('allgenesvep', 'bsvi')
 
     with open(vcf_fname, 'w') as f:
         for line in bsvi_vcf_header:
