@@ -32,7 +32,7 @@ function annotate_vep_vcf {
 	cadd_snv=$(find ./ -name "*SNVs.tsv.gz")
 	cadd_indel=$(find ./ -name "*indel.tsv.gz")
 
-	time docker run -v /home/dnanexus:/opt/vep/.vep \
+	/usr/bin/time -v docker run -v /home/dnanexus:/opt/vep/.vep \
 	ensemblorg/ensembl-vep:release_103.1 \
 	./vep -i /opt/vep/.vep/"${input_vcf}" -o /opt/vep/.vep/"${output_vcf}" \
 	--vcf --cache --refseq --exclude_predicted --symbol --hgvs --af_gnomad \
@@ -71,7 +71,7 @@ function filter_vep_vcf {
 	transcript_list=$(echo "$transcript_list" | sed 's/,/ or Feature match /g')
 	transcript_list="(Feature match ${transcript_list})"
 
-	time docker run -v /home/dnanexus:/opt/vep/.vep \
+	/usr/bin/time -v docker run -v /home/dnanexus:/opt/vep/.vep \
 	ensemblorg/ensembl-vep:release_103.1 \
 	./filter_vep -i /opt/vep/.vep/"$input_vcf" \
 	-o /opt/vep/.vep/"$output_vcf" --only_matched --filter \
@@ -88,20 +88,27 @@ main() {
 
 	export BCFTOOLS_PLUGINS=/usr/local/libexec/bcftools/
 
+	THREADS=$(nproc --all)  # control how many operations to open in parallel
+
 	mark-section "downloading inputs"
-	time dx-download-all-inputs --parallel
+	SECONDS=0
 
-	# move maf file and index to home for vep to find
-	mv "${maf_file_path}" /home/dnanexus/
-	mv "${maf_file_tbi_path}" /home/dnanexus/
+	# inputs we can download in parallel to home
+	inputs="${vep_docker} ${vep_annotation[*]} ${mutect2_vcf} ${pindel_vcf} "
+	inputs+="${pindel_vcf_idx} ${mutect2_bed} ${pindel_bed} ${mutect2_fasta} "
+	inputs+="${mutect2_fai} ${maf_file} ${maf_file_tbi} "
 
-	# array inputs end up in subdirectories (i.e. ~/in/array-input/0/), flatten to parent dir
-	find ~/in/vep_plugins -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_plugins
-	find ~/in/vep_refs -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_refs
-	find ~/in/vep_annotation -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/in/vep_annotation
+	# download inputs in parallel, opening one download per CPU core available
+	echo "$inputs" | grep -Eo "file-[0-9A-Za-z]+" | xargs -P${THREADS} -n1 dx download
 
-	# move annotation sources to home
-	mv ~/in/vep_annotation/* /home/dnanexus/
+	# other inputs that need to be in directories
+	mkdir Plugins vep_refs
+	echo "${vep_refs[@]}"  | grep -Eo "file-[0-9A-Za-z]+" | xargs -P${THREADS} -n1 dx download -o vep_refs/
+	echo "${vep_plugins[@]}" |  grep -Eo "file-[0-9A-Za-z]+" | xargs -P${THREADS} -n1 dx download -o Plugins/
+
+	duration=$SECONDS
+	echo "Downloading took $(($duration / 60))m $(($duration % 60))s."
+
 
 	mark-section "filtering mutect2 VCF"
 	# retain variants that are: # within ROIs (mutect2_bed file),
@@ -115,21 +122,17 @@ main() {
 	# bedtools and bcftools are app assets
 	splitfile="${mutect2_vcf_prefix}_split.vcf"
 
-	time bedtools intersect -header -u -a "${mutect2_vcf_path}" -b "${mutect2_bed_path}" \
-	| bcftools norm -f "${mutect2_fasta_path}" -m -any --keep-sum AD - \
-	| bcftools view -i "FORMAT/AF[*]>0.03" - \
-	| bcftools view -i "FORMAT/DP>99" - \
-	-o ~/"${splitfile}"
+	time bedtools intersect -header -u -a "${mutect2_vcf_name}" -b "${mutect2_bed_name}" \
+		| bcftools norm -f "${mutect2_fasta_name}" -m -any --keep-sum AD - \
+		| bcftools view -i "FORMAT/AF[*]>0.03" - \
+		| bcftools view -i "FORMAT/DP>99" - \
+		-o ~/"${splitfile}"
 
 	mark-section "filtering pindel VCF"
 	# Filtering of pindel vcf for:
 	# - only indels that intersect with the exons of interest bed file
 	# - only insertions with length greater than 2. This will remove the 1 bp false positive insertions
-
-	mv /home/dnanexus/in/pindel_vcf/* /home/dnanexus
-	mv /home/dnanexus/in/pindel_vcf_idx/* /home/dnanexus
-
-	bcftools view -R $pindel_bed_path $pindel_vcf_name > "${pindel_vcf_prefix}.tmp.vcf"
+	bcftools view -R $pindel_bed_name $pindel_vcf_name > "${pindel_vcf_prefix}.tmp.vcf"
 
 	pindel_filtered_vcf="${pindel_vcf_prefix}.filtered.vcf"
 	bcftools view -i 'INFO/LEN > 2' "${pindel_vcf_prefix}.tmp.vcf" > $pindel_filtered_vcf
@@ -148,8 +151,6 @@ main() {
 	zgrep "^#" "$splitfile" | sed s"/^##tumor_sample/${sample_field}\n&/" > mutect2.header
 	bcftools reheader -h mutect2.header "$splitfile" > "${mutect2_vcf_prefix}.opencga.vcf"
 
-	# sense check in logs it looks correct
-	zgrep "^#" "${mutect2_vcf_prefix}.opencga.vcf"
 
 	# modify SampleName for tumour sample line to correctly link to our sample ID
 	tumour_sample=$(grep "##SAMPLE=<ID=TUMOUR" "$pindel_filtered_vcf")
@@ -160,26 +161,19 @@ main() {
 
 	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf"
 
-	# sense check in logs it looks correct
-	zgrep '^#' "${pindel_vcf_prefix}.opencga.vcf"
 
 	mark-section "annotating and further filtering"
 	# permissions to write to /home/dnanexus
 	chmod a+rwx /home/dnanexus
 
 	# extract vep reference annotation tarball to /home/dnanexus
-	time tar xf /home/dnanexus/in/vep_refs/*.tar.gz -C /home/dnanexus
+	time tar xf /home/dnanexus/vep_refs/homo_sapiens_refseq*.tar.gz -C /home/dnanexus
 
 	# place fasta and indexes for VEP in the annotation folder
-	mv /home/dnanexus/in/vep_refs/*fa.gz* ~/homo_sapiens_refseq/103_GRCh38/
-
-	# place plugins into plugins folder
-	mkdir ~/Plugins
-	mv ~/in/vep_plugins/* ~/Plugins/
-
+	mv /home/dnanexus/vep_refs/fa.gz* ~/homo_sapiens_refseq/103_GRCh38/
 
 	# load vep docker
-	docker load -i "$vep_docker_path"
+	docker load -i "$vep_docker_name"
 
 	# will run VEP to annotate against specified transcripts for all,
 	# lymphoid and myeloid gene lists
@@ -301,7 +295,7 @@ main() {
 
 	# call Python script (asset) to spit multiallelics, generate BSVI VCF and excel report
 	# note that order of VCFs passed to -v determines order of sheets in excel
-	time python3 vcf_handler.py -a "${allgenesvepfile}" \
+	/usr/bin/time -v python3 vcf_handler.py -a "${allgenesvepfile}" \
 	-v "${myeloidvepfile}" "${cllvepfile}" "${tp53vepfile}" "${lglvepfile}" \
 	"${hclvepfile}" "${lplvepfile}" "${lymphoidvepfile}" "${t_nhlvepfile}" \
 	"${plasma_cell_myelomavepfile}" -p "$pindelvepfile"
@@ -309,32 +303,12 @@ main() {
 	mark-section "uploading output"
 
 	# make required output directories and move files
-	mkdir -p ~/out/mutect2_opencga_vcf ~/out/cgppindel_opencga_vcf\
-		~/out/allgenes_filtered_vcf ~/out/lymphoid_filtered_vcf/ ~/out/myeloid_filtered_vcf/\
-		~/out/cll_filtered_vcf ~/out/tp53_filtered_vcf ~/out/lgl_filtered_vcf ~/out/hcl_filtered_vcf\
-		~/out/lpl_filtered_vcf ~/out/bsvi_vcf ~/out/text_report ~/out/excel_report ~/out/pindel_vep_vcf\
-		~/out/t_nhl_filtered_vcf ~/out/plasma_cell_myeloma_filtered_vcf
+	mkdir -p ~/out/allgenes_filtered_vcf ~/out/bsvi_vcf ~/out/excel_report ~/out/pindel_vep_vcf
 
-	bsvivcf="${mutect2_vcf_prefix}_allgenes_bsvi.vcf"
-	variantlist="${mutect2_vcf_prefix}_allgenes.tsv"
-	excellist="${mutect2_vcf_prefix}_panels.xlsx"
-
-	mv ~/"${mutect2_vcf_prefix}.opencga.vcf" ~/out/mutect2_opencga_vcf/
-	mv ~/"${pindel_vcf_prefix}.opencga.vcf" ~/out/cgppindel_opencga_vcf/
 	mv ~/"${pindelvepfile}" ~/out/pindel_vep_vcf/
 	mv ~/"${allgenesvepfile}" ~/out/allgenes_filtered_vcf/
-	mv ~/"${lymphoidvepfile}" ~/out/lymphoid_filtered_vcf/
-	mv ~/"${myeloidvepfile}" ~/out/myeloid_filtered_vcf/
-	mv ~/"${cllvepfile}" ~/out/cll_filtered_vcf/
-	mv ~/"${tp53vepfile}" ~/out/tp53_filtered_vcf/
-	mv ~/"${lglvepfile}" ~/out/lgl_filtered_vcf/
-	mv ~/"${hclvepfile}" ~/out/hcl_filtered_vcf/
-	mv ~/"${lplvepfile}" ~/out/lpl_filtered_vcf/
-	mv ~/"${t_nhlvepfile}" ~/out/t_nhl_filtered_vcf/
-	mv ~/"${plasma_cell_myelomavepfile}" ~/out/plasma_cell_myeloma_filtered_vcf/
-	mv ~/"${bsvivcf}" ~/out/bsvi_vcf/
-	mv ~/"${variantlist}" ~/out/text_report/
-	mv ~/"${excellist}" ~/out/excel_report/
+	mv ~/"${mutect2_vcf_prefix}_bsvi.vcf" ~/out/bsvi_vcf/
+	mv ~/"${mutect2_vcf_prefix}_panels.xlsx" ~/out/excel_report/
 
 	dx-upload-all-outputs --parallel
 	mark-success
