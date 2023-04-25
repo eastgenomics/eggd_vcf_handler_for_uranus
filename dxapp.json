@@ -260,6 +260,13 @@
       "patterns": ["*_allgenes_bsvi.vcf"]
     },
     {
+      "name": "text_report",
+      "label": "Text variant report from all genes",
+      "help": "Text (tsv) list of variants from all genes",
+      "class": "file",
+      "patterns": ["*_allgenes.tsv"]
+    },
+    {
       "name": "excel_report",
       "label": "Excel variant report for scientists",
       "help": "Excel workbook with variants for each panel in separate sheets",
