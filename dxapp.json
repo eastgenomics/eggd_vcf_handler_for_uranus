@@ -2,12 +2,9 @@
   "name": "eggd_vcf_handler_for_uranus",
   "title": "eggd_vcf_handler_for_uranus",
   "summary": "Annotates and filters VCF files for Uranus",
-  "properties": {
-    "githubRelease": "2.6.1"
-  },
   "dxapi": "1.0.0",
   "openSource": true,
-  "version": "2.6.1",
+  "version": "2.7.0",
   "inputSpec": [
     {
       "name": "mutect2_vcf",
@@ -243,18 +240,6 @@
   ],
   "outputSpec": [
     {
-      "name": "mutect2_opencga_vcf",
-      "label": "Header modified mutect2 VCF",
-      "help": "mutect2 vcf with added sample tag for uploading to openCGA",
-      "class": "file"
-    },
-    {
-      "name": "cgppindel_opencga_vcf",
-      "label": "Header modified cgppindel VCF",
-      "help": "cgppindel vcf with added sample tag for uploading to openCGA",
-      "class": "file"
-    },
-    {
       "name": "pindel_vep_vcf",
       "label": "Annotated cgppindel VCF",
       "help": "VCF that has been previously filtered and now annotated with VEP",
@@ -266,69 +251,6 @@
       "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
       "class": "file",
       "patterns": ["*allgenesvep.vcf"]
-    },
-    {
-      "name": "lymphoid_filtered_vcf",
-      "label": "Filtered and annotated VCF for lymphoid panel genes",
-      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
-      "class": "file",
-      "patterns": ["*lymphoidvep.vcf"]
-    },
-    {
-      "name": "myeloid_filtered_vcf",
-      "label": "Filtered and annotated VCF for myeloid panel genes",
-      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
-      "class": "file",
-      "patterns": ["*myeloidvep.vcf"]
-    },
-    {
-      "name": "cll_filtered_vcf",
-      "label": "Filtered and annotated VCF for myeloid panel genes",
-      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
-      "class": "file",
-      "patterns": ["*CLLvep.vcf"]
-    },
-    {
-      "name": "tp53_filtered_vcf",
-      "label": "Filtered and annotated VCF for myeloid panel genes",
-      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
-      "class": "file",
-      "patterns": ["*TP53vep.vcf"]
-    },
-    {
-      "name": "lgl_filtered_vcf",
-      "label": "Filtered and annotated VCF for myeloid panel genes",
-      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
-      "class": "file",
-      "patterns": ["*LGLvep.vcf"]
-    },
-    {
-      "name": "hcl_filtered_vcf",
-      "label": "Filtered and annotated VCF for myeloid panel genes",
-      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
-      "class": "file",
-      "patterns": ["*HCLvep.vcf"]
-    },
-    {
-      "name": "lpl_filtered_vcf",
-      "label": "Filtered and annotated VCF for myeloid panel genes",
-      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
-      "class": "file",
-      "patterns": ["*LPLvep.vcf"]
-    },
-    {
-      "name": "t_nhl_filtered_vcf",
-      "label": "Filtered and annotated VCF for T-NHL panel genes",
-      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
-      "class": "file",
-      "patterns": ["*t_nhlvep.vcf"]
-    },
-    {
-      "name": "plasma_cell_myeloma_filtered_vcf",
-      "label": "Filtered and annotated VCF for plasma cell myeloma panel genes",
-      "help": "VCF that has been filtered and annotated using bedtools, bcftools and VEP",
-      "class": "file",
-      "patterns": ["*plasma_cell_myelomavep.vcf"]
     },
     {
       "name": "bsvi_vcf",

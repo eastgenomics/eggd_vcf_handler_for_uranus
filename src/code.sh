@@ -44,6 +44,7 @@ function annotate_vep_vcf {
 	--custom /opt/vep/.vep/"${cosmic_non_coding}",COSMIC,vcf,exact,0,ID \
 	--plugin CADD,/opt/vep/.vep/"${cadd_snv}",/opt/vep/.vep/"${cadd_indel}" \
 	--fields "$filter_fields" \
+	--fork $(nproc --all) \
 	--no_stats
 }
 
@@ -148,9 +149,6 @@ main() {
 	zgrep "^#" "$splitfile" | sed s"/^##tumor_sample/${sample_field}\n&/" > mutect2.header
 	bcftools reheader -h mutect2.header "$splitfile" > "${mutect2_vcf_prefix}.opencga.vcf"
 
-	# sense check in logs it looks correct
-	zgrep "^#" "${mutect2_vcf_prefix}.opencga.vcf"
-
 	# modify SampleName for tumour sample line to correctly link to our sample ID
 	tumour_sample=$(grep "##SAMPLE=<ID=TUMOUR" "$pindel_filtered_vcf")
 	header_line=$(sed s"/SampleName=[A-Za-z0-9\_\-]*/SampleName=${sample_id}/" <<< $tumour_sample)
@@ -160,8 +158,6 @@ main() {
 
 	bcftools reheader -h pindel.header "$pindel_filtered_vcf" > "${pindel_vcf_prefix}.opencga.vcf"
 
-	# sense check in logs it looks correct
-	zgrep '^#' "${pindel_vcf_prefix}.opencga.vcf"
 
 	mark-section "annotating and further filtering"
 	# permissions to write to /home/dnanexus
@@ -176,7 +172,6 @@ main() {
 	# place plugins into plugins folder
 	mkdir ~/Plugins
 	mv ~/in/vep_plugins/* ~/Plugins/
-
 
 	# load vep docker
 	docker load -i "$vep_docker_path"
@@ -301,7 +296,7 @@ main() {
 
 	# call Python script (asset) to spit multiallelics, generate BSVI VCF and excel report
 	# note that order of VCFs passed to -v determines order of sheets in excel
-	time python3 vcf_handler.py -a "${allgenesvepfile}" \
+	/usr/bin/time -v python3 vcf_handler.py -a "${allgenesvepfile}" \
 	-v "${myeloidvepfile}" "${cllvepfile}" "${tp53vepfile}" "${lglvepfile}" \
 	"${hclvepfile}" "${lplvepfile}" "${lymphoidvepfile}" "${t_nhlvepfile}" \
 	"${plasma_cell_myelomavepfile}" -p "$pindelvepfile"
@@ -309,32 +304,14 @@ main() {
 	mark-section "uploading output"
 
 	# make required output directories and move files
-	mkdir -p ~/out/mutect2_opencga_vcf ~/out/cgppindel_opencga_vcf\
-		~/out/allgenes_filtered_vcf ~/out/lymphoid_filtered_vcf/ ~/out/myeloid_filtered_vcf/\
-		~/out/cll_filtered_vcf ~/out/tp53_filtered_vcf ~/out/lgl_filtered_vcf ~/out/hcl_filtered_vcf\
-		~/out/lpl_filtered_vcf ~/out/bsvi_vcf ~/out/text_report ~/out/excel_report ~/out/pindel_vep_vcf\
-		~/out/t_nhl_filtered_vcf ~/out/plasma_cell_myeloma_filtered_vcf
+	mkdir -p ~/out/allgenes_filtered_vcf ~/out/bsvi_vcf ~/out/text_report \
+		~/out/excel_report ~/out/pindel_vep_vcf
 
-	bsvivcf="${mutect2_vcf_prefix}_allgenes_bsvi.vcf"
-	variantlist="${mutect2_vcf_prefix}_allgenes.tsv"
-	excellist="${mutect2_vcf_prefix}_panels.xlsx"
-
-	mv ~/"${mutect2_vcf_prefix}.opencga.vcf" ~/out/mutect2_opencga_vcf/
-	mv ~/"${pindel_vcf_prefix}.opencga.vcf" ~/out/cgppindel_opencga_vcf/
 	mv ~/"${pindelvepfile}" ~/out/pindel_vep_vcf/
 	mv ~/"${allgenesvepfile}" ~/out/allgenes_filtered_vcf/
-	mv ~/"${lymphoidvepfile}" ~/out/lymphoid_filtered_vcf/
-	mv ~/"${myeloidvepfile}" ~/out/myeloid_filtered_vcf/
-	mv ~/"${cllvepfile}" ~/out/cll_filtered_vcf/
-	mv ~/"${tp53vepfile}" ~/out/tp53_filtered_vcf/
-	mv ~/"${lglvepfile}" ~/out/lgl_filtered_vcf/
-	mv ~/"${hclvepfile}" ~/out/hcl_filtered_vcf/
-	mv ~/"${lplvepfile}" ~/out/lpl_filtered_vcf/
-	mv ~/"${t_nhlvepfile}" ~/out/t_nhl_filtered_vcf/
-	mv ~/"${plasma_cell_myelomavepfile}" ~/out/plasma_cell_myeloma_filtered_vcf/
-	mv ~/"${bsvivcf}" ~/out/bsvi_vcf/
-	mv ~/"${variantlist}" ~/out/text_report/
-	mv ~/"${excellist}" ~/out/excel_report/
+	mv ~/"${mutect2_vcf_prefix}_bsvi.vcf" ~/out/bsvi_vcf/
+	mv ~/"${mutect2_vcf_prefix}_allgenes.tsv" ~/out/text_report/
+	mv ~/"${mutect2_vcf_prefix}_panels.xlsx" ~/out/excel_report/
 
 	dx-upload-all-outputs --parallel
 	mark-success
