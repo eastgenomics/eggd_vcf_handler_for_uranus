@@ -26,20 +26,18 @@
 ## What data are required for this app to run?
 - VCF output from sentieon mutect2 as part of Uranus workflow
 - VCF output (+ index) from cgppindel as part of Uranus workflow
-- BED file that details ROIs for myeloid NGS panel (default specified)
-- BED file that details ROIs for filtering cgppindel output (default specified)
-- Genome FASTA and index that was used by to generate the VCF (default specified)
-- VEP docker image (`vep_docker`, default specified)
-- VEP plugins (`vep_plugins`, defaults specified)
-- VEP reference files (`vep_refs`, defaults specified)
-- VEP annotation sources (`vep_annotation`, defaults specified)
-    - Cosmic Coding Variants VCF (v94)
-    - Cosmic NonCoding Variants VCF (v94)
-    - ClinVar VCF (20211002)
-    - CADD (v1.6)
-- MAF file created from known set of samples (default specified)
-    - default provided is from **205** NovaSeq samples (as of 211007)
-    - the process for generating this VCF and from what samples is documented [here](https://cuhbioinformatics.atlassian.net/wiki/spaces/URA/pages/2415591443/Creation+of+Myeloid+NovaSeq+samples+MAF+file)
+- BED file that details ROIs for myeloid NGS panel
+- BED file that details ROIs for filtering cgppindel output
+- Genome FASTA and index that was used by to generate the VCF
+- VEP docker image (`vep_docker`)
+- VEP plugins (`vep_plugins`)
+- VEP reference files (`vep_refs`)
+- VEP annotation sources (`vep_annotation`)
+    - Cosmic Coding Variants VCF
+    - Cosmic NonCoding Variants VCF
+    - ClinVar VCF
+    - CADD
+- MAF file created from known set of samples
 
 ## What does this app output?
 - Excel workbook of annotated variants

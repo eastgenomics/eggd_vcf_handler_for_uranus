@@ -4,7 +4,7 @@
   "summary": "Annotates and filters VCF files for Uranus",
   "dxapi": "1.0.0",
   "openSource": true,
-  "version": "2.7.0",
+  "version": "2.8.0",
   "inputSpec": [
     {
       "name": "mutect2_vcf",
@@ -36,7 +36,6 @@
       "help": "The bed file will be used to remove variants outside the regions of interest",
       "class": "file",
       "patterns": ["coding_unrestricted*.bed"],
-      "default": {"$dnanexus_link": "file-G9vKbv0433Gg2bP9GP72pxKJ"},
       "suggestions": [
         {
           "name": "001_Reference",
@@ -58,9 +57,6 @@
           "path": "/bed_files/b38/kits/myeloid"
         }
       ],
-      "default": {
-        "$dnanexus_link": "file-G0bFvXQ433GZJq780QgxZxKf"
-      },
       "optional": false
     },
     {
@@ -68,8 +64,6 @@
       "label": "FASTA for bcftools to split multiallelics",
       "help": "Should be equivalent FASTA as used by mutect2",
       "class": "file",
-      "patterns": ["GRCh38.no_alt_analysis_set_chr_mask21.fa.gz"],
-      "default": {"$dnanexus_link": "file-Fy4gjFj41zgGjKJ85FYYPX4q"},
       "suggestions": [
         {
           "name": "001_Reference",
@@ -84,8 +78,6 @@
       "label": "mutect2 fai index",
       "help": "Should be equivalent fai index as used by mutect2",
       "class": "file",
-      "patterns": ["GRCh38.no_alt_analysis_set_chr_mask21.fa.fai"],
-      "default": {"$dnanexus_link": "file-FyFGvzQ41zgBq7xf4Gy9Q28g"},
       "suggestions": [
         {
           "name": "001_Reference",
@@ -102,9 +94,6 @@
       "class": "file",
       "patterns": ["*docker.tar.gz"],
       "optional": false,
-      "default": {
-        "$dnanexus_link": "file-G61zff8433Gy2KQX7Q2z150B"
-      },
       "suggestions": [
         {
           "name": "001_Reference",
@@ -119,14 +108,6 @@
       "help": "Associated plugin files for VEP",
       "class": "array:file",
       "optional": false,
-      "default": [
-        {
-          "$dnanexus_link": "file-G61zfvj433GxkQXF414xP1yF"
-        },
-        {
-          "$dnanexus_link": "file-G620928433Gy9p2b27zb8JFV"
-        }
-      ],
       "suggestions": [
         {
           "name": "001_Reference",
@@ -141,20 +122,6 @@
       "help": "Reference file annotation sources for VEP (not ClinVar etc.)",
       "class": "array:file",
       "optional": false,
-      "default": [
-        {
-          "$dnanexus_link": "file-G61y95Q433Gk05zyFKF9kFv2"
-        },
-        {
-          "$dnanexus_link": "file-G61yBV8433GjbVj022PyV3K5"
-        },
-        {
-          "$dnanexus_link": "file-G61yBf0433Gp4BBVGj0jxqvP"
-        },
-        {
-          "$dnanexus_link": "file-G61yF38433GQgP504Px5PZ4G"
-        }
-      ],
       "suggestions": [
         {
           "name": "001_Reference",
@@ -169,38 +136,6 @@
       "help": "Reference file annotation sources for VEP and index (ClinVar & CADD)",
       "class": "array:file",
       "optional": false,
-      "default": [
-        {
-          "$dnanexus_link": "file-G61xXjj433GzPf7Q45Z7pf2z"
-        },
-        {
-          "$dnanexus_link": "file-G61xXyj433Gz7Bx5P8j7zbGy"
-        },
-        {
-          "$dnanexus_link": "file-G61xbP0433GqX36p8QQxP3PV"
-        },
-        {
-          "$dnanexus_link": "file-G61xf3j433Gz49jf6XjKG4F0"
-        },
-        {
-          "$dnanexus_link": "file-G61xfZ0433Gj2vJ7P8k9ky2Z"
-        },
-        {
-          "$dnanexus_link": "file-G61y4Y8433GvyjJ52Fj5XjY5"
-        },
-        {
-          "$dnanexus_link": "file-G64Jfk0433GVp0JJPZ4Q8FzJ"
-        },
-        {
-          "$dnanexus_link": "file-G64K4bj433GZ35xJJ7YXGvzv"
-        },
-        {
-          "$dnanexus_link": "file-G64K0VQ433GV03462J6GXb9Z"
-        },
-        {
-          "$dnanexus_link": "file-G64K4j8433Gb0PgpFgbzjj1b"
-        }
-      ],
       "suggestions": [
         {
           "name": "001_Reference",
@@ -214,7 +149,6 @@
       "label": "MAF file",
       "help": "MAF file created from Myeloid samples sequenced on NovaSeqs",
       "class": "file",
-      "default": {"$dnanexus_link": "file-G5PXK90433GjKFq70yfz9qfZ"},
       "suggestions": [
         {
           "name": "001_Reference",
@@ -228,7 +162,6 @@
       "label": "MAF file index",
       "help": "index of MAF file",
       "class": "file",
-      "default": {"$dnanexus_link": "file-G5PXKFj433Gv495095Z95pk1"},
       "suggestions": [
         {
           "name": "001_Reference",
@@ -376,7 +309,7 @@
       }
     ],
     "contactEmail": "East GLH Bioinformatics",
-    "whatsNew": "* 2.6.1 Change SampleName field in openCGA VCF header to be first field of filename\n *2.6.0 Add 15 new genes, 2 new panels and able to handle multiple transcripts for a given gene \n * 2.5.2 Bug fix for wrongly raised AssertionError \n * 2.5.1 Fix bug on not removing .gz suffix from opencga vcfs; * 2.5.0 Add extra output VCFs with modified headers to include sample ID for uploading to openCGA \n * 2.4.0 Add filtering to myeloid tab of synonymous and common variants; Remove depcrecated transcript for CHEK2 \n * 2.3.0 Add custom annotation for Cosmic (fixes bug with multiple IDs added); Add filtering and annotation for pindel; Split annotation sources to separate inputs \n * 2.2.0 New MAF file as input; Refactoring \n * 2.1.0 Sample names added\n * 2.0.0 New panels; VEP input; previous counts\n * 1.5.7 Add CADD and ClinVar annotation\n * 1.5.3 Added excel workbook output with variants for each panel in separate sheets, removed synonymous variant filter, prefix exon numbers with the word exon to overcome excel, further report_text formatting\n * 1.4.12 Allele fraction in tsv variantlist\n * 1.4.10 Make mark-section and mark-success executable in github\n * 1.4.9 Minor changed to report_text field in tsv, and brings back gnomad AF in tsv(!)\n * 1.4.8 (Deprecated) Adds AF column to text report\n * 1.4.4 (Deprecated) Uses app assets\n * 1.3.4 (Deprecated) Creates text report\n * 1.2.10 (Deprecated) Creates BSVI VCF\n * 1.1.9 (Deprecated) With VEP\n * 1.0.0 (Deprecated) Initial app"
+    "whatsNew": "*2.8.0 Remove default input resource files \n * 2.6.1 Change SampleName field in openCGA VCF header to be first field of filename\n *2.6.0 Add 15 new genes, 2 new panels and able to handle multiple transcripts for a given gene \n * 2.5.2 Bug fix for wrongly raised AssertionError \n * 2.5.1 Fix bug on not removing .gz suffix from opencga vcfs; * 2.5.0 Add extra output VCFs with modified headers to include sample ID for uploading to openCGA \n * 2.4.0 Add filtering to myeloid tab of synonymous and common variants; Remove depcrecated transcript for CHEK2 \n * 2.3.0 Add custom annotation for Cosmic (fixes bug with multiple IDs added); Add filtering and annotation for pindel; Split annotation sources to separate inputs \n * 2.2.0 New MAF file as input; Refactoring \n * 2.1.0 Sample names added\n * 2.0.0 New panels; VEP input; previous counts\n * 1.5.7 Add CADD and ClinVar annotation\n * 1.5.3 Added excel workbook output with variants for each panel in separate sheets, removed synonymous variant filter, prefix exon numbers with the word exon to overcome excel, further report_text formatting\n * 1.4.12 Allele fraction in tsv variantlist\n * 1.4.10 Make mark-section and mark-success executable in github\n * 1.4.9 Minor changed to report_text field in tsv, and brings back gnomad AF in tsv(!)\n * 1.4.8 (Deprecated) Adds AF column to text report\n * 1.4.4 (Deprecated) Uses app assets\n * 1.3.4 (Deprecated) Creates text report\n * 1.2.10 (Deprecated) Creates BSVI VCF\n * 1.1.9 (Deprecated) With VEP\n * 1.0.0 (Deprecated) Initial app"
   },
   "categories": [],
   "developers":[
@@ -390,3 +323,4 @@
   },
   "ignoreReuse": true
 }
+
